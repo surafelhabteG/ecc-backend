@@ -32,15 +32,30 @@ app.get('/getAllModules/:courseId', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    canvasAPI.createUser(req.body).then((response) => {
-        if (response) {
-            res.status(200).send({ status: true, message: 'Success' });
+    var body = req.body;
+    var custom_data = body.custom_data;
+    delete body.custom_data;
 
+    canvasAPI.createUser(body).then((response) => {
+        if (response) {
+            let url = `/users/${response.id}/custom_data/profile?ns=extraInfo`;
+
+            canvasAPI.storeCustomData(url, custom_data).then((response) => {
+                if (response) {
+                    res.status(200).send({ status: true, message: 'Success' });
+
+                } else {
+                    res.status(200).send({ status: false, message: ['Unable to register this user. please try again'] });
+                }
+
+            }).catch((err) => {
+                res.status(200).send(err);
+            });
         } else {
-            res.status(404).send({ status: false, message: 'not success' });
+            res.status(200).send({ status: false, message: ['Unable to register this user. please try again'] });
         }
     }).catch((err) => {
-        res.status(500).send(err);
+        res.status(200).send(err);
     });
 });
 

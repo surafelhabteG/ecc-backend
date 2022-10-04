@@ -5,24 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Attach to Node in Express",
             "type": "node",
-            "request": "launch",
-            "name": "Launch Program",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}\\index.js"
-        },
-        {
-            "name": "express",
-            "port": 4000,
+            "address": "localhost",
             "processId": "${command:PickProcess}",
+            "program": "${workspaceRoot}/index.js",
+            "port": 4000,
             "request": "attach",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "node"
+            "restart": true
         },
-   
     ]
 }
