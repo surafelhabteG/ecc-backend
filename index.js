@@ -58,6 +58,17 @@ app.get('/getAllEnrolledCourses/:userId', (req, res) => {
     });
 });
 
+app.get('/getUserEnrollment/:userId', (req, res) => {
+    canvasAPI.getUserEnrollment(req.params.userId).then(
+        response => res.send(response)
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
 app.get('/getAllModules/:courseId', (req, res) => {
     canvasAPI.getModules(req.params.courseId).then(
         response => res.send(response)
@@ -193,6 +204,17 @@ app.post('/updatePaymentSideeffect', (req, res, next) => {
 
 app.post('/selfEnroll/:course_id', (req, res) => {
     canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
+        response => res.send({ status: true, message: 'success' })
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
+app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
+    canvasAPI.deleteUserCourseEnrollment(req.params.course_id, req.params.enrollment_id).then(
         response => res.send({ status: true, message: 'success' })
     ).catch((errors) => {
         res.status(200).send({
