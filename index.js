@@ -204,7 +204,7 @@ app.post('/updatePaymentSideeffect', (req, res, next) => {
 
 app.post('/selfEnroll/:course_id', (req, res) => {
     canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
-        response => res.send({ status: true, message: 'success' })
+        response => res.send({ status: true, message: 'Course is Added to Your Learning Plan.' })
     ).catch((errors) => {
         res.status(200).send({
             status: false,
@@ -215,7 +215,7 @@ app.post('/selfEnroll/:course_id', (req, res) => {
 
 app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
     canvasAPI.deleteUserCourseEnrollment(req.params.course_id, req.params.enrollment_id).then(
-        response => res.send({ status: true, message: 'success' })
+        response => res.send({ status: true, message: 'Course Is Removed From Learning Plan.' })
     ).catch((errors) => {
         res.status(200).send({
             status: false,
