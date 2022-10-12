@@ -1,5 +1,9 @@
 const app = require('express')();
 const express = require('express');
+const multer = require('multer');
+const morgan = require('morgan');
+const path = require("path");
+const { uuid } = require('uuidv4');
 
 var cors = require('cors');
 var request = require('request');
@@ -7,6 +11,9 @@ const mysql = require('mysql');
 const QueryBuilder = require('node-querybuilder');
 
 var bodyParser = require('body-parser')
+
+app.use(morgan('dev'));
+app.use(express.static('public'));
 
 const connection = {
     host: 'localhost',
@@ -23,18 +30,47 @@ const io = require('socket.io')(httpServer, {
 
 // app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json())
-
 app.use(cors({ origin: '*' }));
 
 const canvasAPI = require('node-canvas-api')
 
 const refNo = [];
-
 const sockets = [];
 
 const port = process.env.PORT || 4000;
 
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
+
+const storage = multer.diskStorage({
+    destination: function (req, file, callback) {
+        callback(null, './public/uploads/ids');
+    },
+    filename: function (req, file, callback) {
+        var id = uuid().replace('-', '');
+        callback(null, `${id}${path.extname(file.originalname).toLowerCase()}`);
+    }
+});
+
+const checkFileType = function (file, cb) {
+    const fileTypes = /jpeg|jpg|png/;
+    const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimeType = fileTypes.test(file.mimetype);
+
+    if (mimeType && extName) {
+        return cb(null, true);
+    } else {
+        cb("Error: You can Only Upload Images!!");
+    }
+}
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10000000 },
+    fileFilter: (req, file, cb) => {
+        checkFileType(file, cb);
+    },
+});
+
 
 app.get('/getAllCourses', (req, res) => {
     canvasAPI.getAllCoursesInAccount(1).then(
@@ -98,18 +134,22 @@ app.get('/getCourseExtraInfo/:courseId', (req, res) => {
     });
 });
 
-app.post('/register', async (req, res) => {
+app.post('/register', upload.single('memberId'), async (req, res) => {
     var body = req.body;
     var custom_data = body.custom_data;
     delete body.custom_data;
 
     canvasAPI.createUser(body).then((response) => {
+        var message = "Success";
+
         if (response) {
             let url = `/users/${response.id}/custom_data/profile?ns=extraInfo`;
 
             canvasAPI.storeCustomData(url, custom_data).then((response) => {
                 if (response) {
-                    res.status(200).send({ status: true, message: 'Success' });
+
+                    !req.file ? message = 'register successfully, but unable to upload file.' : null;
+                    res.status(200).send({ status: true, message: message });
 
                 } else {
                     res.status(200).send({ status: false, message: ['Unable to register this user. please try again'] });
@@ -179,15 +219,13 @@ app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
 
 app.post('/createPaymentSideeffect', (req, res, next) => {
     pool.get_connection(qb => {
-        qb.query('SELECT UUID() AS id', async (err, response) => {
-            req.body.id = await response[0].id;
+        req.body.id = uuid().replace('-', '');
 
-            qb.insert('tbl_payment_sideeffect', req.body, (err, response) => {
-                qb.release();
-                if (err) return res.send({ status: false, message: err });
-                res.send({ status: true, message: { id: req.body.id } });
-            });
-        })
+        qb.insert('tbl_payment_sideeffect', req.body, (err, response) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err });
+            res.send({ status: true, message: { id: req.body.id } });
+        });
     });
 });
 
@@ -223,6 +261,19 @@ app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
         })
     });
 });
+
+
+app.delete('/logout/:user_id/:login_id', (req, res) => {
+    canvasAPI.logoutUser(req.params.user_id, req.params.login_id).then(
+        response => res.send({ status: true, message: 'success' })
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
 
 // io.on('connection', (socket) => {
 //     socket.on('event', (message) => {
