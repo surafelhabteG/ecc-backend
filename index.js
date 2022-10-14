@@ -15,6 +15,12 @@ var bodyParser = require('body-parser')
 app.use(morgan('dev'));
 app.use(express.static('public'));
 
+let id = null;
+
+app.use(() => {
+    id = uuid().replace('-', '');
+});
+
 const connection = {
     host: 'localhost',
     user: 'root',
@@ -34,8 +40,7 @@ app.use(cors({ origin: '*' }));
 
 const canvasAPI = require('node-canvas-api')
 
-const refNo = [];
-const sockets = [];
+const refNo = sockets = [];
 
 const port = process.env.PORT || 4000;
 
@@ -46,7 +51,6 @@ const storage = multer.diskStorage({
         callback(null, './public/uploads/ids');
     },
     filename: function (req, file, callback) {
-        var id = uuid().replace('-', '');
         callback(null, `${id}${path.extname(file.originalname).toLowerCase()}`);
     }
 });
@@ -70,7 +74,6 @@ const upload = multer({
         checkFileType(file, cb);
     },
 });
-
 
 app.get('/getAllCourses', (req, res) => {
     canvasAPI.getAllCoursesInAccount(1).then(
@@ -138,6 +141,9 @@ app.post('/register', upload.single('memberId'), async (req, res) => {
     var body = req.body;
     var custom_data = body.custom_data;
     delete body.custom_data;
+
+    // get id from global
+    body.id = id;
 
     canvasAPI.createUser(body).then((response) => {
         var message = "Success";
@@ -219,8 +225,6 @@ app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
 
 app.post('/createPaymentSideeffect', (req, res, next) => {
     pool.get_connection(qb => {
-        req.body.id = uuid().replace('-', '');
-
         qb.insert('tbl_payment_sideeffect', req.body, (err, response) => {
             qb.release();
             if (err) return res.send({ status: false, message: err });
@@ -273,25 +277,5 @@ app.delete('/logout/:user_id/:login_id', (req, res) => {
         })
     });
 });
-
-
-// io.on('connection', (socket) => {
-//     socket.on('event', (message) => {
-//         io.emit('message', message);
-//         refNo.push(message.refNo)
-//         sockets.push(socket);
-//     });
-
-//     socket.on('disconnect', () => { });
-// });
-
-// app.get('/paymentSuccessful', (req, res) => {
-//     // if () {
-
-//     // }
-//     res.send({ name: 'surafel habte' })
-
-//     sockets[0].emit('message', 'successfull');
-// });
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
