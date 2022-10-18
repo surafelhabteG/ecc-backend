@@ -5,6 +5,11 @@ const morgan = require('morgan');
 const path = require("path");
 const { uuid } = require('uuidv4');
 
+const Jimp = require("jimp");
+const fs = require("fs");
+
+const base64 = require('node-base64-image');
+
 var cors = require('cors');
 var request = require('request');
 const mysql = require('mysql');
@@ -15,11 +20,7 @@ var bodyParser = require('body-parser')
 app.use(morgan('dev'));
 app.use(express.static('public'));
 
-let id = null;
-
-app.use(() => {
-    id = uuid().replace('-', '');
-});
+app.use(express.json({ limit: '25mb' }));
 
 const connection = {
     host: 'localhost',
@@ -34,8 +35,10 @@ const io = require('socket.io')(httpServer, {
 });
 
 
-// app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json())
+// app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(bodyParser.json());
 app.use(cors({ origin: '*' }));
 
 const canvasAPI = require('node-canvas-api')
@@ -46,37 +49,82 @@ const port = process.env.PORT || 4000;
 
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
-const storage = multer.diskStorage({
-    destination: function (req, file, callback) {
-        callback(null, './public/uploads/ids');
-    },
-    filename: function (req, file, callback) {
-        callback(null, `${id}${path.extname(file.originalname).toLowerCase()}`);
-    }
-});
 
-const checkFileType = function (file, cb) {
-    const fileTypes = /jpeg|jpg|png/;
-    const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimeType = fileTypes.test(file.mimetype);
 
-    if (mimeType && extName) {
-        return cb(null, true);
+
+
+
+// const storage = (id) => multer.diskStorage({
+//     destination: function (req, file, callback) {
+//         callback(null, './public/uploads/ids');
+//     },
+//     filename: function (req, file, callback) {
+//         callback(null, `${id}${path.extname(file.originalname).toLowerCase()}`);
+//     }
+// });
+
+// const checkFileType = function (file, cb) {
+//     const fileTypes = /jpeg|jpg|png/;
+//     const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
+//     const mimeType = fileTypes.test(file.mimetype);
+
+//     if (mimeType && extName) {
+//         return cb(null, true);
+//     } else {
+//         cb("Error: You can Only Upload Images!!");
+//     }
+// }
+
+// const upload = (id) => multer({
+//     storage: storage(id),
+//     limits: { fileSize: 10000000 },
+//     fileFilter: (req, file, cb) => {
+//         checkFileType(file, cb);
+//     },
+// });
+
+
+
+// convert base64 string into actual file.
+async function convertBase64ToImage(data, fileName) {
+    const url = `./public/uploads/ids/${fileName}`;
+    data = data.split("base64,");
+
+    if (data[0].includes('data:image')) {
+        const buffer = Buffer.from(data[1], "base64");
+        await base64.decode(buffer, { fname: url, ext: 'jpeg' });
+
+        Jimp.read(`${url}.jpeg`, async (err, image) => {
+            if (err) {
+                return {
+                    status: false, message: err
+                };
+            } else {
+                await image.quality(40).write(`${url}.jpeg`);
+                return true;
+            }
+        });
+
     } else {
-        cb("Error: You can Only Upload Images!!");
+        return {
+            status: false, message: 'Only image is allowed to upload. please try again.'
+        }
     }
 }
 
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 10000000 },
-    fileFilter: (req, file, cb) => {
-        checkFileType(file, cb);
-    },
+
+app.post('/base64', (req, res) => {
+    if (convertBase64ToImage(req.body.image, uuid().replace('-', ''))) {
+
+        res.status(200).send({ status: true, message: 'success' });
+
+    } else {
+        res.status(200).send(res);
+    }
 });
 
 app.get('/getAllCourses', (req, res) => {
-    canvasAPI.getAllCoursesInAccount(1).then(
+    canvasAPI.getCourses().then(
         response => res.send(response)
     ).catch((errors) => {
         res.status(200).send({
@@ -137,13 +185,16 @@ app.get('/getCourseExtraInfo/:courseId', (req, res) => {
     });
 });
 
-app.post('/register', upload.single('memberId'), async (req, res) => {
+app.post('/register', async (req, res) => {
     var body = req.body;
-    var custom_data = body.custom_data;
-    delete body.custom_data;
 
-    // get id from global
-    body.id = id;
+    var custom_data = body.custom_data;
+    var memberId = body.memberId;
+
+    delete body.custom_data;
+    delete body.memberId;
+
+    body.id = uuid().replace('-', '');
 
     canvasAPI.createUser(body).then((response) => {
         var message = "Success";
@@ -154,7 +205,10 @@ app.post('/register', upload.single('memberId'), async (req, res) => {
             canvasAPI.storeCustomData(url, custom_data).then((response) => {
                 if (response) {
 
-                    !req.file ? message = 'register successfully, but unable to upload file.' : null;
+                    const result = convertBase64ToImage(memberId, body.id);
+
+                    !result.status ? message = 'register successfully, but unable to upload file.' : null;
+
                     res.status(200).send({ status: true, message: message });
 
                 } else {
