@@ -49,11 +49,6 @@ const port = process.env.PORT || 4000;
 
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
-
-
-
-
-
 // const storage = (id) => multer.diskStorage({
 //     destination: function (req, file, callback) {
 //         callback(null, './public/uploads/ids');
@@ -112,7 +107,6 @@ async function convertBase64ToImage(data, fileName) {
     }
 }
 
-
 app.post('/base64', (req, res) => {
     if (convertBase64ToImage(req.body.image, uuid().replace('-', ''))) {
 
@@ -123,8 +117,29 @@ app.post('/base64', (req, res) => {
     }
 });
 
+app.get('/searchUser/:criteria', (req, res) => {
+    canvasAPI.searchUser(req.params.criteria).then((response) => {
+        if ('login_id' in response) {
+            res.status(200).send(
+                { status: false, message: 'email address already exist. please try using another one.' }
+            );
+
+        } else {
+            res.send(response)
+
+        }
+
+    }
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
 app.get('/getAllCourses', (req, res) => {
-    canvasAPI.getCourses().then(
+    canvasAPI.getAllCoursesInAccount(2).then(
         response => res.send(response)
     ).catch((errors) => {
         res.status(200).send({
@@ -196,33 +211,47 @@ app.post('/register', async (req, res) => {
 
     body.id = uuid().replace('-', '');
 
-    canvasAPI.createUser(body).then((response) => {
-        var message = "Success";
+    canvasAPI.searchUser(`sis_login_id:${body.email}`).then((response) => {
+        if ('login_id' in response) {
+            res.status(200).send(
+                { status: false, message: 'email address already exist. please try using another one.' }
+            );
 
-        if (response) {
-            let url = `/users/${response.id}/custom_data/profile?ns=extraInfo`;
+        } else {
+            canvasAPI.createUser(body).then((response) => {
+                var message = "Success";
 
-            canvasAPI.storeCustomData(url, custom_data).then((response) => {
                 if (response) {
+                    let url = `/users/${response.id}/custom_data/profile?ns=extraInfo`;
 
-                    const result = convertBase64ToImage(memberId, body.id);
+                    canvasAPI.storeCustomData(url, custom_data).then((response) => {
+                        if (response) {
 
-                    !result.status ? message = 'register successfully, but unable to upload file.' : null;
+                            const result = convertBase64ToImage(memberId, body.id);
 
-                    res.status(200).send({ status: true, message: message });
+                            !result.status ? message = 'register successfully, but unable to upload file.' : null;
 
+                            res.status(200).send({ status: true, message: message });
+
+                        } else {
+                            res.status(200).send({ status: false, message: ['Unable to register this user. please try again'] });
+                        }
+
+                    }).catch((errors) => {
+                        res.status(200).send({
+                            status: false,
+                            message: errors.message
+                        })
+                    });
                 } else {
                     res.status(200).send({ status: false, message: ['Unable to register this user. please try again'] });
                 }
-
             }).catch((errors) => {
                 res.status(200).send({
                     status: false,
                     message: errors.message
                 })
             });
-        } else {
-            res.status(200).send({ status: false, message: ['Unable to register this user. please try again'] });
         }
     }).catch((errors) => {
         res.status(200).send({
@@ -230,6 +259,7 @@ app.post('/register', async (req, res) => {
             message: errors.message
         })
     });
+
 });
 
 app.post('/getToken', (req, res) => {
@@ -278,6 +308,8 @@ app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
 });
 
 app.post('/createPaymentSideeffect', (req, res, next) => {
+    req.body.id = uuid().replace('-', '');
+
     pool.get_connection(qb => {
         qb.insert('tbl_payment_sideeffect', req.body, (err, response) => {
             qb.release();
@@ -296,7 +328,6 @@ app.post('/updatePaymentSideeffect', (req, res, next) => {
         });
     });
 });
-
 
 app.post('/selfEnroll/:course_id', (req, res) => {
     canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
@@ -319,7 +350,6 @@ app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
         })
     });
 });
-
 
 app.delete('/logout/:user_id/:login_id', (req, res) => {
     canvasAPI.logoutUser(req.params.user_id, req.params.login_id).then(
