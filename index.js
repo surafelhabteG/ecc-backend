@@ -209,15 +209,16 @@ app.post('/register', async (req, res) => {
     delete body.custom_data;
     delete body.memberId;
 
-    body.id = uuid().replace('-', '');
+    // body.id = uuid().replace('-', '');
 
-    canvasAPI.searchUser(`sis_login_id:${body.email}`).then((response) => {
+    canvasAPI.searchUser(`sis_login_id:${body.pseudonym.unique_id}`).then((response) => {
         if ('login_id' in response) {
             res.status(200).send(
-                { status: false, message: 'email address already exist. please try using another one.' }
+                { status: false, message: ['email address already exist. please try using another one.'] }
             );
-
-        } else {
+        }
+    }).catch((errors) => {
+        if (errors.statusCode == 404) {
             canvasAPI.createUser(body).then((response) => {
                 var message = "Success";
 
@@ -227,9 +228,12 @@ app.post('/register', async (req, res) => {
                     canvasAPI.storeCustomData(url, custom_data).then((response) => {
                         if (response) {
 
-                            const result = convertBase64ToImage(memberId, body.id);
+                            const result = { status: true };
 
-                            !result.status ? message = 'register successfully, but unable to upload file.' : null;
+                            if (memberId !== undefined) {
+                                convertBase64ToImage(memberId, response.id);
+                                !result.status ? message = 'register successfully, but unable to upload file.' : null;
+                            }
 
                             res.status(200).send({ status: true, message: message });
 
@@ -253,11 +257,6 @@ app.post('/register', async (req, res) => {
                 })
             });
         }
-    }).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
     });
 
 });
