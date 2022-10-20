@@ -224,6 +224,7 @@ app.post('/register', async (req, res) => {
 
                 if (response) {
                     let url = `/users/${response.id}/custom_data/profile?ns=extraInfo`;
+                    var id = response.id;
 
                     canvasAPI.storeCustomData(url, custom_data).then((response) => {
                         if (response) {
@@ -231,7 +232,7 @@ app.post('/register', async (req, res) => {
                             const result = { status: true };
 
                             if (memberId !== undefined) {
-                                convertBase64ToImage(memberId, response.id);
+                                convertBase64ToImage(memberId, id);
                                 !result.status ? message = 'register successfully, but unable to upload file.' : null;
                             }
 
