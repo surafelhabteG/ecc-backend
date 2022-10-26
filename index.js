@@ -330,6 +330,8 @@ app.delete('/logout/:user_id/', (req, res) => {
     canvasAPI.terminateUserSession(req.params.user_id).then((response) => {
         if (response == 'ok') {
             res.send({ status: true, message: 'success' })
+        } else {
+            res.send({ status: false, message: 'unable to logout the user. try again.' })
         }
     }).catch((errors) => {
         res.status(200).send({
