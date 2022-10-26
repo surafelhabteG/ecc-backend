@@ -34,6 +34,16 @@ const io = require('socket.io')(httpServer, {
     cors: { origin: '*' }
 });
 
+require('dotenv').config();
+
+//middleware set token 
+// const preRequestScript = async (req, res, next) => {
+//     let token = await req.headers['authorization'];
+// process.env.CANVAS_API_TOKEN = token;
+//     next();
+// }
+
+// app.use(preRequestScript);
 
 // app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -48,37 +58,6 @@ const refNo = sockets = [];
 const port = process.env.PORT || 4000;
 
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
-
-// const storage = (id) => multer.diskStorage({
-//     destination: function (req, file, callback) {
-//         callback(null, './public/uploads/ids');
-//     },
-//     filename: function (req, file, callback) {
-//         callback(null, `${id}${path.extname(file.originalname).toLowerCase()}`);
-//     }
-// });
-
-// const checkFileType = function (file, cb) {
-//     const fileTypes = /jpeg|jpg|png/;
-//     const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
-//     const mimeType = fileTypes.test(file.mimetype);
-
-//     if (mimeType && extName) {
-//         return cb(null, true);
-//     } else {
-//         cb("Error: You can Only Upload Images!!");
-//     }
-// }
-
-// const upload = (id) => multer({
-//     storage: storage(id),
-//     limits: { fileSize: 10000000 },
-//     fileFilter: (req, file, cb) => {
-//         checkFileType(file, cb);
-//     },
-// });
-
-
 
 // convert base64 string into actual file.
 async function convertBase64ToImage(data, fileName) {
@@ -129,8 +108,7 @@ app.get('/searchUser/:criteria', (req, res) => {
 
         }
 
-    }
-    ).catch((errors) => {
+    }).catch((errors) => {
         res.status(200).send({
             status: false,
             message: errors.message
@@ -209,8 +187,6 @@ app.post('/register', async (req, res) => {
     delete body.custom_data;
     delete body.memberId;
 
-    // body.id = uuid().replace('-', '');
-
     canvasAPI.searchUser(`sis_login_id:${body.pseudonym.unique_id}`).then((response) => {
         if ('login_id' in response) {
             res.status(200).send(
@@ -259,7 +235,6 @@ app.post('/register', async (req, res) => {
             });
         }
     });
-
 });
 
 app.post('/getToken', (req, res) => {
@@ -351,9 +326,22 @@ app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
     });
 });
 
-app.delete('/logout/:user_id/:login_id', (req, res) => {
-    canvasAPI.logoutUser(req.params.user_id, req.params.login_id).then(
-        response => res.send({ status: true, message: 'success' })
+app.delete('/logout/:user_id/', (req, res) => {
+    canvasAPI.terminateUserSession(req.params.user_id).then((response) => {
+        if (response == 'ok') {
+            res.send({ status: true, message: 'success' })
+        }
+    }).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
+app.get('/copyCourse/:source_course_id/:target_course_id', (req, res) => {
+    canvasAPI.courseCopy(req.params.source_course_id, req.params.target_course_id).then(
+        response => res.send(response)
     ).catch((errors) => {
         res.status(200).send({
             status: false,
