@@ -1,26 +1,26 @@
 const app = require('express')();
 const express = require('express');
-const multer = require('multer');
 const morgan = require('morgan');
-const path = require("path");
 const { uuid } = require('uuidv4');
 
 const Jimp = require("jimp");
-const fs = require("fs");
-
 const base64 = require('node-base64-image');
 
-var cors = require('cors');
-var request = require('request');
-const mysql = require('mysql');
+const cors = require('cors');
+const request = require('request');
 const QueryBuilder = require('node-querybuilder');
+const bodyParser = require('body-parser')
+const httpServer = require('http').createServer(app);
 
-var bodyParser = require('body-parser')
+const redis = require('redis');
+const client = redis.createClient(process.env.redisPort, process.env.redisHost);
 
 app.use(morgan('dev'));
 app.use(express.static('public'));
-
 app.use(express.json({ limit: '25mb' }));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(cors({ origin: '*' }));
 
 const connection = {
     host: 'localhost',
@@ -28,36 +28,11 @@ const connection = {
     password: 'Abcd@5304',
     database: 'ecc'
 };
-
-const httpServer = require('http').createServer(app);
-const io = require('socket.io')(httpServer, {
-    cors: { origin: '*' }
-});
+const canvasAPI = require('node-canvas-api')
+const port = process.env.PORT || 4000;
+const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
 require('dotenv').config();
-
-//middleware set token 
-// const preRequestScript = async (req, res, next) => {
-//     let token = await req.headers['authorization'];
-// process.env.CANVAS_API_TOKEN = token;
-//     next();
-// }
-
-// app.use(preRequestScript);
-
-// app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.urlencoded({ extended: true }));
-
-app.use(bodyParser.json());
-app.use(cors({ origin: '*' }));
-
-const canvasAPI = require('node-canvas-api')
-
-const refNo = sockets = [];
-
-const port = process.env.PORT || 4000;
-
-const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
 // convert base64 string into actual file.
 async function convertBase64ToImage(data, fileName) {
@@ -86,27 +61,78 @@ async function convertBase64ToImage(data, fileName) {
     }
 }
 
-app.post('/base64', (req, res) => {
-    if (convertBase64ToImage(req.body.image, uuid().replace('-', ''))) {
+async function updatePaymentSideeffect(data){
+    pool.get_connection(qb => {
+        qb.update('tbl_payment_sideeffect', data, { id: data.id }, (err) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err });
+            res.send({ status: true, message: 'data updated successfully.' });
+        });
+    });
+}
 
-        res.status(200).send({ status: true, message: 'success' });
+async function deletePaymentSideeffect(id){
+    pool.get_connection(qb => {
+        qb.delete('tbl_payment_sideeffect',{ id: id }, (err) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err });
+            res.send({ status: true, message: 'data deleted successfully.' });
+        });
+    });
+}
 
-    } else {
-        res.status(200).send(res);
+// Course and other related
+app.get('/getAllCourses', (req, res) => {
+    try {
+
+        client.get('users', (err, data) => {
+    
+          if (err) {
+            res.status(200).send({ status: false, message: err })
+            throw err;
+          }
+    
+          if (data) {
+            res.status(200).send(JSON.parse(data));
+          } else {
+            canvasAPI.getAllCoursesInAccount(2).then((response) => { 
+              client.setEx('courses', 600, JSON.stringify(response));
+              res.status(200).send(response);
+
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: errors.message
+                })
+            });
+          }
+        });
+        
+    } catch (err) {
+        res.status(500).send({ error: err.message });
     }
 });
 
-app.get('/searchUser/:criteria', (req, res) => {
-    canvasAPI.searchUser(req.params.criteria).then((response) => {
-        if ('login_id' in response) {
-            res.status(200).send(
-                { status: false, message: 'email address already exist. please try using another one.' }
-            );
+app.get('/getAllModules/:courseId', (req, res) => {
+    canvasAPI.getModules(req.params.courseId).then(
+        response => res.send(response)
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
 
-        } else {
-            res.send(response)
+app.get('/getCourseExtraInfo/:courseId', (req, res) => {
+    canvasAPI.getCourseFile(req.params.courseId).then((response) => {
+        let file = response.find((element) => element.display_name == "extraInfo.json");
 
-        }
+        request.get(file.url, function (error, response, body) {
+            if (!error && response.statusCode == 200) {
+                res.send(JSON.parse(body));
+            }
+        });
 
     }).catch((errors) => {
         res.status(200).send({
@@ -116,9 +142,140 @@ app.get('/searchUser/:criteria', (req, res) => {
     });
 });
 
-app.get('/getAllCourses', (req, res) => {
-    canvasAPI.getAllCoursesInAccount(2).then(
-        response => res.send(response)
+
+// Payment and sideEffect
+app.post('/createPaymentReference', (req, res) => {
+    fetch(process.env.MEDA_PAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.MEDA_PAY_TOKEN}`,
+        },
+        body: JSON.stringify(req.body.data)
+    })
+    .then((response) => response.json())
+    .then((response) => {
+        let data = {
+            billReferenceNumber: response.billReferenceNumber,
+            id: req.body.metaData.paymentId,
+        };
+        
+        if (response.status == 'created') {
+            updatePaymentSideeffect(data);
+            res.status(200).send({ status: true, message: response });
+
+        } else {
+            deletePaymentSideeffect(req.body.metaData.paymentId);
+            res.status(200).send({ 
+                status: false, 
+                message: 'unable to process the payment now. please try again later.' 
+            });
+        }
+    })
+    .catch((error) => {
+        res.status(200).send({ 
+            status: false, 
+            message: error 
+        });
+    }); 
+});
+
+app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
+    let url = `${process.env.MEDA_PAY_URL}/${req.params.billReferenceNumber}`;
+
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.MEDA_PAY_TOKEN}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((response) => {
+        if (response.status == 'completed') {
+            let data = {
+                status: response.status,
+                id: req.params.paymentId,
+            };
+
+            updatePaymentSideeffect(data);
+
+            res.status(200).send({ 
+                status: true, 
+                message: 'success' 
+            });
+
+        } else {
+          let message = 
+            'payment is not complete. whether you are not pay successfully or something happen. tray again.'
+          
+            res.status(200).send({ 
+                status: false, 
+                message: message 
+            });        
+        }
+
+      }).catch((error) => {
+            res.status(200).send({ 
+                status: false, 
+                message: error 
+            });
+       });
+});
+
+
+app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
+    pool.get_connection(qb => {
+        qb.select('*')
+            .where('id', req.params.paymentId)
+            .get('tbl_payment_sideeffect', (err, response) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.msg });
+                res.send(response);
+            });
+    });
+});
+
+app.post('/createPaymentSideeffect', (req, res) => {
+    req.body.id = uuid().replace('-', '');
+
+    pool.get_connection(qb => {
+        qb.insert('tbl_payment_sideeffect', req.body, (err) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err });
+            res.send({ status: true, message: { id: req.body.id } });
+        });
+    });
+});
+
+app.post('/updatePaymentSideeffect', (req, res) => {
+    pool.get_connection(qb => {
+        qb.update('tbl_payment_sideeffect', req.body, { id: req.body.id }, (err) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err });
+            res.send({ status: true, message: 'data updated successfully.' });
+        });
+    });
+});
+
+
+
+
+// Enrollment
+app.post('/selfEnroll/:course_id', (req, res) => {
+    canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
+        () => res.send({ status: true, message: 'Course is Added to Your Learning Plan.' })
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
+app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
+    canvasAPI.deleteUserCourseEnrollment(req.params.course_id, req.params.enrollment_id).then(
+        () => res.send({ status: true, message: 'Course Is Removed From Learning Plan.' })
     ).catch((errors) => {
         res.status(200).send({
             status: false,
@@ -149,33 +306,27 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
     });
 });
 
-app.get('/getAllModules/:courseId', (req, res) => {
-    canvasAPI.getModules(req.params.courseId).then(
-        response => res.send(response)
-    ).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
-    });
-});
 
-app.get('/getCourseExtraInfo/:courseId', (req, res) => {
-    canvasAPI.getCourseFile(req.params.courseId).then((response) => {
-        let file = response.find((element) => element.display_name == "extraInfo.json");
+// User Authntication and other
+app.post('/isLoggedIn', async (req, res) => {
+    try {
 
-        request.get(file.url, function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                res.send(JSON.parse(body));
-            }
+        client.get('IPADDRESS', (err, data) => {
+          if (err) {
+            res.status(200).send({ status: false, message: err })
+            throw err;
+          }
+    
+          if (data) {
+            res.status(200).send({ status: true, message: JSON.parse(data) });
+          } else {
+            res.status(200).send({ status: false, message: '' });
+          }
         });
-
-    }).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
-    });
+        
+    } catch (err) {
+        res.status(200).send({ error: err.message });
+    }
 });
 
 app.post('/register', async (req, res) => {
@@ -237,77 +388,44 @@ app.post('/register', async (req, res) => {
     });
 });
 
-app.post('/getToken', (req, res) => {
-    canvasAPI.getToken(req.body).then(
-        response => res.send(response)
-    ).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
-    });
-});
+app.post('/login', (req, res) => {
+    canvasAPI.getToken(req.body).then((response) => {
+        let access_token = {
+            access_token: response.access_token
+        };
 
-app.get('/getUserDetail/:userId', (req, res) => {
-    canvasAPI.getSelf(req.params.userId).then(
-        response => res.send(response)
-    ).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
-    });
-});
+        canvasAPI.getSelf(response.user.id).then((response) => {
+            response = { ...response, ...access_token };
 
-app.get('/getUserCustomData/:userId', (req, res) => {
-    canvasAPI.getUserCustomData(req.params.userId).then(
-        response => res.send(response)
-    ).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
-    });
-});
+            if(response.sis_user_id == 'admin'){
+                client.setEx('IPADDRESS', 600, JSON.stringify(response));
 
-app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
-    pool.get_connection(qb => {
-        qb.select('*')
-            .where('id', req.params.paymentId)
-            .get('tbl_payment_sideeffect', (err, response) => {
-                qb.release();
-                if (err) return res.send({ status: false, message: err.msg });
-                res.send(response);
-            });
-    });
-});
+                res.status(200).send({
+                    status: true,
+                    message: response
+                })
+            } else {
+                canvasAPI.getUserCustomData(response.id).then((customData) => {
+                    let profile = { ...response, ...customData.data };
+                    client.setEx('IPADDRESS', 600, JSON.stringify(profile));
 
-app.post('/createPaymentSideeffect', (req, res, next) => {
-    req.body.id = uuid().replace('-', '');
+                    res.send(profile)
 
-    pool.get_connection(qb => {
-        qb.insert('tbl_payment_sideeffect', req.body, (err, response) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err });
-            res.send({ status: true, message: { id: req.body.id } });
+                }).catch((errors) => {
+                    res.status(200).send({
+                        status: false,
+                        message: errors.message
+                    })
+                });
+            }
+        }).catch((errors) => {
+            res.status(200).send({
+                status: false,
+                message: errors.message
+            })
         });
-    });
-});
 
-app.post('/updatePaymentSideeffect', (req, res, next) => {
-    pool.get_connection(qb => {
-        qb.update('tbl_payment_sideeffect', req.body, { id: req.body.id }, (err, response) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err });
-            res.send({ status: true, message: 'data inserted successfully.' });
-        });
-    });
-});
-
-app.post('/selfEnroll/:course_id', (req, res) => {
-    canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
-        response => res.send({ status: true, message: 'Course is Added to Your Learning Plan.' })
-    ).catch((errors) => {
+    }).catch((errors) => {
         res.status(200).send({
             status: false,
             message: errors.message
@@ -315,10 +433,19 @@ app.post('/selfEnroll/:course_id', (req, res) => {
     });
 });
 
-app.delete('/selfUnEnroll/:course_id/:enrollment_id', (req, res) => {
-    canvasAPI.deleteUserCourseEnrollment(req.params.course_id, req.params.enrollment_id).then(
-        response => res.send({ status: true, message: 'Course Is Removed From Learning Plan.' })
-    ).catch((errors) => {
+app.get('/searchUser/:criteria', (req, res) => {
+    canvasAPI.searchUser(req.params.criteria).then((response) => {
+        if ('login_id' in response) {
+            res.status(200).send(
+                { status: false, message: 'email address already exist. please try using another one.' }
+            );
+
+        } else {
+            res.send(response)
+
+        }
+
+    }).catch((errors) => {
         res.status(200).send({
             status: false,
             message: errors.message
@@ -334,17 +461,6 @@ app.delete('/logout/:user_id/', (req, res) => {
             res.send({ status: false, message: 'unable to logout the user. try again.' })
         }
     }).catch((errors) => {
-        res.status(200).send({
-            status: false,
-            message: errors.message
-        })
-    });
-});
-
-app.get('/copyCourse/:source_course_id/:target_course_id', (req, res) => {
-    canvasAPI.courseCopy(req.params.source_course_id, req.params.target_course_id).then(
-        response => res.send(response)
-    ).catch((errors) => {
         res.status(200).send({
             status: false,
             message: errors.message
