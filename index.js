@@ -306,6 +306,64 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
     });
 });
 
+// enrollment request
+app.post('/createEnrollmentRequest', async (req, res) => {
+    req.body.id = uuid().replace('-', '');
+
+    pool.get_connection(qb => {
+        qb.insert('tbl_enrollment_request', req.body, (err) => {
+            qb.release();
+            if (err) return res.status(200).send({ status: false, message: err });
+            res.send({ status: true, message: 'request created successfully.' });
+        });
+    });
+});
+
+app.post('/updateEnrollmentRequest', (req, res) => {
+    pool.get_connection(qb => {
+        qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
+            qb.release();
+            if (err) return res.status(200).send({ status: false, message: err });
+            res.send({ status: true, message: 'request updated successfully.' });
+        });
+    });
+});
+
+app.get('/getAllEnrollmentRequest', (req, res) => {
+    pool.get_connection(qb => {
+        qb.select('*')
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.msg });
+                res.send(response);
+            });
+    });
+});
+
+app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
+    pool.get_connection(qb => {
+        qb.select('*')
+        .where('id', req.params.id)
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.msg });
+                res.send(response);
+            });
+    });
+});
+
+app.get('/deleteEnrollmentRequest/:id', (req, res) => {
+    pool.get_connection(qb => {
+        qb.delete('tbl_enrollment_request',{ id: id }, (err) => {
+            qb.release();
+            if (err) return res.status(200).send({ status: false, message: err });
+            res.status(200).send({ status: true, message: 'data deleted successfully.' });
+        });
+    });
+});
+
+
+
 
 // User Authntication and other
 app.post('/isLoggedIn', async (req, res) => {
@@ -433,16 +491,14 @@ app.post('/login', (req, res) => {
     });
 });
 
+
 app.get('/searchUser/:criteria', (req, res) => {
     canvasAPI.searchUser(req.params.criteria).then((response) => {
         if ('login_id' in response) {
-            res.status(200).send(
-                { status: false, message: 'email address already exist. please try using another one.' }
-            );
+            res.status(200).send({ status: true, message: response });
 
         } else {
-            res.send(response)
-
+            res.status(200).send({ status: false, message: null });
         }
 
     }).catch((errors) => {
