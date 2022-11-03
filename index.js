@@ -2,6 +2,7 @@ const app = require('express')();
 const express = require('express');
 const morgan = require('morgan');
 const { uuid } = require('uuidv4');
+const axios = require("axios").create({baseUrl: ""});
 
 const Jimp = require("jimp");
 const base64 = require('node-base64-image');
@@ -12,8 +13,33 @@ const QueryBuilder = require('node-querybuilder');
 const bodyParser = require('body-parser')
 const httpServer = require('http').createServer(app);
 
+var nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    port: 465,          
+    host: "smtp.gmail.com",
+       auth: {
+            user: 'surafel@360ground.com',
+            pass: 'abcd@5304',
+         },
+    secure: true,
+});
+
+
+
 const redis = require('redis');
-const client = redis.createClient(process.env.redisPort, process.env.redisHost);
+// const client = redis.createClient();
+// client.connect();
+
+let redisClient;
+
+(async () => {
+  redisClient = redis.createClient();
+
+  redisClient.on("error", (error) => console.error(`Error : ${error}`));
+
+  await redisClient.connect();
+})();
+
 
 app.use(morgan('dev'));
 app.use(express.static('public'));
@@ -33,6 +59,9 @@ const port = process.env.PORT || 4000;
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
 require('dotenv').config();
+
+const requestPromise = require('request-promise');
+
 
 // convert base64 string into actual file.
 async function convertBase64ToImage(data, fileName) {
@@ -82,102 +111,203 @@ async function deletePaymentSideeffect(id){
 }
 
 // Course and other related
-app.get('/getAllCourses', (req, res) => {
+app.get('/getAllCourses', async (req, res) => {
     try {
 
-        client.get('users', (err, data) => {
-    
-          if (err) {
-            res.status(200).send({ status: false, message: err })
-            throw err;
-          }
-    
-          if (data) {
-            res.status(200).send(JSON.parse(data));
-          } else {
-            canvasAPI.getAllCoursesInAccount(2).then((response) => { 
-              client.setEx('courses', 600, JSON.stringify(response));
-              res.status(200).send(response);
+        const cacheResults = await redisClient.get('courses');
 
+        if (cacheResults) {
+            res.status(200).send(JSON.parse(cacheResults));
+
+        } else {
+            canvasAPI.getAllCoursesInAccount(2).then( async (response) => { 
+                await redisClient.set('courses', JSON.stringify(response));
+                res.status(200).send(response);
+  
             }).catch((errors) => {
                 res.status(200).send({
                     status: false,
                     message: errors.message
                 })
             });
-          }
-        });
-        
+        }
     } catch (err) {
-        res.status(500).send({ error: err.message });
+        res.status(200).send({
+            status: false,
+            message: err
+        })
     }
 });
 
-app.get('/getAllModules/:courseId', (req, res) => {
-    canvasAPI.getModules(req.params.courseId).then(
-        response => res.send(response)
-    ).catch((errors) => {
+app.get('/getAllModules/:courseId', async (req, res) => {
+    try {
+
+        const cacheResults = await redisClient.get(`modules/${req.params.courseId}`);
+
+        if (cacheResults) {
+            res.status(200).send(JSON.parse(cacheResults));
+
+        } else {
+            canvasAPI.getModules(req.params.courseId).then(async (response) => {
+                await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response));
+                res.status(200).send(response);
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: errors.message
+                })
+            });
+        }
+    } catch (err) {
         res.status(200).send({
             status: false,
-            message: errors.message
+            message: err
         })
-    });
+    }
 });
 
-app.get('/getCourseExtraInfo/:courseId', (req, res) => {
-    canvasAPI.getCourseFile(req.params.courseId).then((response) => {
-        let file = response.find((element) => element.display_name == "extraInfo.json");
+app.get('/getCourseExtraInfo/:courseId', async (req, res) => {
+    try {
 
-        request.get(file.url, function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                res.send(JSON.parse(body));
-            }
-        });
+        const cacheResults = await redisClient.get(`courseExtraInfo/${req.params.courseId}`);
 
-    }).catch((errors) => {
+        if (cacheResults) {
+            res.status(200).send(JSON.parse(cacheResults));
+
+        } else {
+
+            canvasAPI.getCourseFile(req.params.courseId).then((response) => {
+                let file = response.find((element) => element.display_name == "extraInfo.json");
+        
+                request.get(file.url, async function (error, response, body) {
+                    if (!error && response.statusCode == 200) {
+                        await redisClient.set(`courseExtraInfo/${req.params.courseId}`, body);
+                        res.status(200).send(JSON.parse(body));
+                    }
+                });
+        
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: errors.message
+                })
+            });
+        }
+
+    } catch (err) {
         res.status(200).send({
             status: false,
-            message: errors.message
+            message: err
         })
-    });
+    }
 });
 
 
 // Payment and sideEffect
-app.post('/createPaymentReference', (req, res) => {
-    fetch(process.env.MEDA_PAY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.MEDA_PAY_TOKEN}`,
-        },
-        body: JSON.stringify(req.body.data)
-    })
-    .then((response) => response.json())
-    .then((response) => {
+app.post('/createPaymentReference', async (req, res) => {
+    const requestOption = {
+        'method': 'POST',
+        'uri': `${process.env.MEDA_PAY_URL}`,
+        'body': req.body.data,
+        'headers': {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdG9tZWRhQDM2MGdyb3VuZC5jb20iLCJuYW1lIjoiTWVkYSBWb3VjaGVyIiwicGhvbmUiOiIrMjUxOTEzMDA4NTk1IiwiaXNzIjoiIiwiaWF0IjoxNTk4OTY0NTQwLCJleHAiOjIwMzA1MDA1NDB9.0xCu1GltD3fM8EoZOryDtw7zQMvyBWq1vBbIzQEH1Fk`
+        }
+      };
+
+      requestPromise(requestOption)
+      .then(function (response) {
         let data = {
             billReferenceNumber: response.billReferenceNumber,
             id: req.body.metaData.paymentId,
         };
         
         if (response.status == 'created') {
-            updatePaymentSideeffect(data);
+            // updatePaymentSideeffect(data);
             res.status(200).send({ status: true, message: response });
 
         } else {
-            deletePaymentSideeffect(req.body.metaData.paymentId);
+            // deletePaymentSideeffect(req.body.metaData.paymentId);
             res.status(200).send({ 
                 status: false, 
                 message: 'unable to process the payment now. please try again later.' 
             });
-        }
+        }        
     })
-    .catch((error) => {
+    .catch(function (error) {
         res.status(200).send({ 
             status: false, 
             message: error 
         });
-    }); 
+    });
+
+    // const result =  await axios.post("https://api.pay.meda.chat/v1/bills",{
+    //     title: "Foo",
+    //     body: "bar",
+    //     userID: 1
+    // })
+    //     .then((response) => response.json())
+    //     .then(function (response) {
+    //         let data = {
+    //             billReferenceNumber: response.billReferenceNumber,
+    //             id: req.body.metaData.paymentId,
+    //         };
+            
+    //         if (response.status == 'created') {
+    //             // updatePaymentSideeffect(data);
+    //             res.status(200).send({ status: true, message: response });
+    
+    //         } else {
+    //             // deletePaymentSideeffect(req.body.metaData.paymentId);
+    //             res.status(200).send({ 
+    //                 status: false, 
+    //                 message: 'unable to process the payment now. please try again later.' 
+    //             });
+    //         }        
+    //     })
+    //     .catch(function (error) {
+    //         res.status(200).send({ 
+    //             status: false, 
+    //             message: error 
+    //         });
+    //     });
+
+
+
+
+
+    // fetch(process.env.MEDA_PAY_URL, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       Authorization: `Bearer ${process.env.MEDA_PAY_TOKEN}`,
+    //     },
+    //     body: JSON.stringify(req.body)
+    // })
+    // .then((response) => response.json())
+    // .then((response) => {
+    //     let data = {
+    //         billReferenceNumber: response.billReferenceNumber,
+    //         id: req.body.metaData.paymentId,
+    //     };
+        
+    //     if (response.status == 'created') {
+    //         // updatePaymentSideeffect(data);
+    //         res.status(200).send({ status: true, message: response });
+
+    //     } else {
+    //         // deletePaymentSideeffect(req.body.metaData.paymentId);
+    //         res.status(200).send({ 
+    //             status: false, 
+    //             message: 'unable to process the payment now. please try again later.' 
+    //         });
+    //     }
+    // })
+    // .catch((error) => {
+    //     res.status(200).send({ 
+    //         status: false, 
+    //         message: error 
+    //     });
+    // }); 
 });
 
 app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
@@ -311,21 +441,19 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
 app.post('/isLoggedIn', async (req, res) => {
     try {
 
-        client.get('IPADDRESS', (err, data) => {
-          if (err) {
-            res.status(200).send({ status: false, message: err })
-            throw err;
-          }
-    
-          if (data) {
-            res.status(200).send({ status: true, message: JSON.parse(data) });
-          } else {
-            res.status(200).send({ status: false, message: '' });
-          }
-        });
-        
+        const cacheResults = await redisClient.get(`auth/${req.body.access_token}`);
+
+        if (cacheResults) {
+            res.status(200).send({ status: true, message: JSON.parse(cacheResults) });
+
+        } else {
+            res.status(200).send({ status: false, message: {}});
+        }
     } catch (err) {
-        res.status(200).send({ error: err.message });
+        res.status(200).send({
+            status: false,
+            message: err
+        })
     }
 });
 
@@ -388,49 +516,68 @@ app.post('/register', async (req, res) => {
     });
 });
 
-app.post('/login', (req, res) => {
-    canvasAPI.getToken(req.body).then((response) => {
-        let access_token = {
-            access_token: response.access_token
-        };
+app.post('/login', async (req, res) => {
+    try {
 
-        canvasAPI.getSelf(response.user.id).then((response) => {
-            response = { ...response, ...access_token };
-
-            if(response.sis_user_id == 'admin'){
-                client.setEx('IPADDRESS', 600, JSON.stringify(response));
-
-                res.status(200).send({
-                    status: true,
-                    message: response
-                })
-            } else {
-                canvasAPI.getUserCustomData(response.id).then((customData) => {
-                    let profile = { ...response, ...customData.data };
-                    client.setEx('IPADDRESS', 600, JSON.stringify(profile));
-
-                    res.send(profile)
-
-                }).catch((errors) => {
+        canvasAPI.getToken(req.body).then((response) => {
+            let access_token = {
+                access_token: response.access_token
+            };
+    
+            canvasAPI.getSelf(response.user.id).then(async (response) => {
+                response = { ...response, ...access_token };
+    
+                if(response.sis_user_id == 'admin'){
+                    await redisClient.set(`auth/${response.access_token}`, JSON.stringify(response), {
+                        EX: 3600,
+                        NX: true,
+                      });
                     res.status(200).send({
-                        status: false,
-                        message: errors.message
-                    })
-                });
-            }
+                        status: true,
+                        message: 'a'
+                    });
+                } else {
+                    canvasAPI.getUserCustomData(response.id).then(async (customData) => {
+                        let profile = { ...response, ...customData.data };
+                        await redisClient.set(`auth/${profile.access_token}`, JSON.stringify(profile));
+
+                        res.status(200).send({
+                            status: true,
+                            message: profile
+                        });
+    
+                    }).catch((errors) => {
+                        res.status(200).send({
+                            status: false,
+                            message: 'b'
+                        })
+                    });
+                }
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: 'c'
+                })
+            });
+    
         }).catch((errors) => {
             res.status(200).send({
                 status: false,
-                message: errors.message
+                message: 'd'
             })
         });
 
-    }).catch((errors) => {
+    } catch (err) {
         res.status(200).send({
             status: false,
-            message: errors.message
+            message: 'e'
         })
-    });
+    }
+
+
+
+
+   
 });
 
 app.get('/searchUser/:criteria', (req, res) => {
@@ -453,19 +600,60 @@ app.get('/searchUser/:criteria', (req, res) => {
     });
 });
 
-app.delete('/logout/:user_id/', (req, res) => {
-    canvasAPI.terminateUserSession(req.params.user_id).then((response) => {
-        if (response == 'ok') {
-            res.send({ status: true, message: 'success' })
-        } else {
-            res.send({ status: false, message: 'unable to logout the user. try again.' })
-        }
-    }).catch((errors) => {
+app.delete('/logout/:user_id/:access_token', async (req, res) => {
+    try {
+
+        canvasAPI.terminateUserSession(req.params.user_id).then(async (response) => {
+            if (response == 'ok') {
+                const result = await redisClient.del(`auth/${req.params.access_token}`);
+
+                if(result){
+                    res.send({ status: true, message: 'success' })
+
+                } else {
+                    res.send({ status: false, message: 'unable to logout the user Redis. try again.' })
+                }
+
+            } else {
+                res.send({ status: false, message: 'unable to logout the user. try again.' })
+            }
+        }).catch((errors) => {
+            res.status(200).send({
+                status: false,
+                message: errors.message
+            })
+        });
+
+    } catch (err) {
         res.status(200).send({
             status: false,
-            message: errors.message
+            message: err
         })
-    });
+    }
 });
+
+
+// contact us
+
+app.post('/contactUs', async (req, res) => {
+    const mailData = {
+        from: req.body.email,
+        to: 'surafel@360ground.com',
+        subject: `contactus message from ${req.body.fullName}, phone number : ${req.body.phoneNumber}`,
+        text: req.body.message,
+    };
+    transporter.sendMail(mailData, function (err, info) {
+        if(err){
+            res.status(200).send({
+              status: false, message: err.message
+            });
+        } else {
+            res.status(200).send({
+                status: true, message: info
+            });
+        }   
+     });
+});
+
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
