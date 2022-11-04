@@ -40,11 +40,7 @@ const transporter2 = nodemailer.createTransport({
     }
   });
 
-
-
 const redis = require('redis');
-// const client = redis.createClient();
-// client.connect();
 
 let redisClient;
 
@@ -224,25 +220,28 @@ app.post('/createPaymentReference', async (req, res) => {
     const requestOption = {
         'method': 'POST',
         'uri': `${process.env.MEDA_PAY_URL}`,
-        'body': req.body.data,
+        'body': JSON.stringify(req.body.data),
         'headers': {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdG9tZWRhQDM2MGdyb3VuZC5jb20iLCJuYW1lIjoiTWVkYSBWb3VjaGVyIiwicGhvbmUiOiIrMjUxOTEzMDA4NTk1IiwiaXNzIjoiIiwiaWF0IjoxNTk4OTY0NTQwLCJleHAiOjIwMzA1MDA1NDB9.0xCu1GltD3fM8EoZOryDtw7zQMvyBWq1vBbIzQEH1Fk`
+           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.MEDA_PAY_TOKEN}`
         }
-      };
+    };
 
       requestPromise(requestOption)
       .then(function (response) {
+        response = JSON.parse(response);
+
         let data = {
             billReferenceNumber: response.billReferenceNumber,
-            id: req.body.metaData.paymentId,
+            id: req.body.data.metaData.paymentId,
         };
         
         if (response.status == 'created') {
-            // updatePaymentSideeffect(data);
+            updatePaymentSideeffect(data);
             res.status(200).send({ status: true, message: response });
 
         } else {
-            // deletePaymentSideeffect(req.body.metaData.paymentId);
+            // deletePaymentSideeffect(req.body.data.metaData.paymentId);
             res.status(200).send({ 
                 status: false, 
                 message: 'unable to process the payment now. please try again later.' 
@@ -252,92 +251,27 @@ app.post('/createPaymentReference', async (req, res) => {
     .catch(function (error) {
         res.status(200).send({ 
             status: false, 
-            message: error 
+            message: error.message 
         });
     });
 
-    // const result =  await axios.post("https://api.pay.meda.chat/v1/bills",{
-    //     title: "Foo",
-    //     body: "bar",
-    //     userID: 1
-    // })
-    //     .then((response) => response.json())
-    //     .then(function (response) {
-    //         let data = {
-    //             billReferenceNumber: response.billReferenceNumber,
-    //             id: req.body.metaData.paymentId,
-    //         };
-            
-    //         if (response.status == 'created') {
-    //             // updatePaymentSideeffect(data);
-    //             res.status(200).send({ status: true, message: response });
-    
-    //         } else {
-    //             // deletePaymentSideeffect(req.body.metaData.paymentId);
-    //             res.status(200).send({ 
-    //                 status: false, 
-    //                 message: 'unable to process the payment now. please try again later.' 
-    //             });
-    //         }        
-    //     })
-    //     .catch(function (error) {
-    //         res.status(200).send({ 
-    //             status: false, 
-    //             message: error 
-    //         });
-    //     });
-
-
-
-
-
-    // fetch(process.env.MEDA_PAY_URL, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //       Authorization: `Bearer ${process.env.MEDA_PAY_TOKEN}`,
-    //     },
-    //     body: JSON.stringify(req.body)
-    // })
-    // .then((response) => response.json())
-    // .then((response) => {
-    //     let data = {
-    //         billReferenceNumber: response.billReferenceNumber,
-    //         id: req.body.metaData.paymentId,
-    //     };
-        
-    //     if (response.status == 'created') {
-    //         // updatePaymentSideeffect(data);
-    //         res.status(200).send({ status: true, message: response });
-
-    //     } else {
-    //         // deletePaymentSideeffect(req.body.metaData.paymentId);
-    //         res.status(200).send({ 
-    //             status: false, 
-    //             message: 'unable to process the payment now. please try again later.' 
-    //         });
-    //     }
-    // })
-    // .catch((error) => {
-    //     res.status(200).send({ 
-    //         status: false, 
-    //         message: error 
-    //     });
-    // }); 
 });
 
-app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
-    let url = `${process.env.MEDA_PAY_URL}/${req.params.billReferenceNumber}`;
 
-    fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.MEDA_PAY_TOKEN}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((response) => {
+app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
+    const requestOption = {
+        'method': 'POST',
+        'uri':`${process.env.MEDA_PAY_URL}/${req.params.billReferenceNumber}`,
+        'headers': {
+           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.MEDA_PAY_TOKEN}`
+        }
+    };
+
+      requestPromise(requestOption)
+      .then(function (response) {
+        response = JSON.parse(response);
+
         if (response.status == 'completed') {
             let data = {
                 status: response.status,
@@ -359,16 +293,15 @@ app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
                 status: false, 
                 message: message 
             });        
-        }
-
-      }).catch((error) => {
-            res.status(200).send({ 
-                status: false, 
-                message: error 
-            });
-       });
+        }        
+    })
+    .catch(function (error) {
+        res.status(200).send({ 
+            status: false, 
+            message: error.message 
+        });
+    });
 });
-
 
 app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
     pool.get_connection(qb => {
@@ -403,8 +336,6 @@ app.post('/updatePaymentSideeffect', (req, res) => {
         });
     });
 });
-
-
 
 
 // Enrollment
@@ -795,10 +726,7 @@ app.get('/viewCertificate/:id', (req,res) => {
                 if (err) return res.send({ status: false, message: err.msg });
 
                 response = await response[0];
-
-
-                res.send(`
-        
+                let view = `
                 <!DOCTYPE html>
                 <html lang="en">
                     <head>
@@ -1073,12 +1001,12 @@ app.get('/viewCertificate/:id', (req,res) => {
                            </div>
                         </div>
                     </body>
-                 </html>
-        
-        
-                `)
-            });
+                 </html>`
 
+                res.status(200).send({
+                    status: true, message : view
+                });
+            });
     })
 
 })
