@@ -504,7 +504,7 @@ app.post('/register', async (req, res) => {
                             const result = { status: true };
 
                             if (memberId !== undefined) {
-                                convertBase64ToImage(memberId, id);
+                                result = convertBase64ToImage(memberId, id);
                                 !result.status ? message = 'register successfully, but unable to upload file.' : null;
                             }
 
@@ -597,6 +597,52 @@ app.post('/login', async (req, res) => {
    
 });
 
+app.post('/updateProfile/:userId', (req, res) => {
+    let url = `/users/${req.params.userId}/custom_data/profile?ns=extraInfo`;
+    let message = "profile updated successfully";
+
+    canvasAPI.storeCustomData(url, req.body.custom_data).then((response) => {
+        if (response) {
+
+            const result = { status: true };
+
+            if (req.body.memberId !== undefined) {
+                result = convertBase64ToImage(req.body.memberId, req.params.userId);
+                !result.status ? message = `${message}, but unable to upload file.` : null;
+            }
+
+            res.status(200).send({ status: true, message: message });
+
+        } else {
+            res.status(200).send({ status: false, message: 'fail to update the profile.' });
+        }
+
+    }).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
+app.post('/saveMyEducation/:userId', (req, res) => {
+    let url = `/users/${req.params.userId}/custom_data/profile?ns=extraInfo`;
+
+    canvasAPI.storeCustomData(url, req.body.custom_data).then((response) => {
+        if (response) {
+            res.status(200).send({ status: true, message: 'education updated successfully.' });
+
+        } else {
+            res.status(200).send({ status: false, message: 'fail to update the education.' });
+        }
+
+    }).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
 
 app.get('/searchUser/:criteria', (req, res) => {
     canvasAPI.searchUser(req.params.criteria).then((response) => {
@@ -675,15 +721,13 @@ app.post('/contactUs', async (req, res) => {
 //create certificate for user who has completed all course requirements
 //this is the certificate table name
 
-let certTableName = 'tbl_certificate'
 
 app.post('/generateCertificate',(req,res) => {
-    
     req.body.id = uuid().replace('-', '');
    
     pool.get_connection(qb => {
 
-        qb.insert(certTableName , req.body , err => {
+        qb.insert('tbl_certificate' , req.body , err => {
 
             qb.release()
 
@@ -696,7 +740,6 @@ app.post('/generateCertificate',(req,res) => {
                 to: req.body.email,
                 subject: `Congragulation ${req.body.studentName} on completing ${req.body.courseName} course`,
                 text: `To view and collect head over to ___ and click the generate certificate button `,
-
             };
 
             transporter2.sendMail(mailData, function (err, info) {
@@ -706,22 +749,15 @@ app.post('/generateCertificate',(req,res) => {
             
                 }   
              });
-        
         })
-
-
     })
-
-
 })
 
-app.get('/viewCertificate/:id', (req,res) => {
-    
+app.get('/viewCertificate/:id', async (req,res) => {
     pool.get_connection(qb  => {
-
         qb.select('*')
             .where('id', req.params.id)
-            .get(certTableName, async (err, response) => {
+            .get('tbl_certificate', async (err, response) => {
                 qb.release();
                 if (err) return res.send({ status: false, message: err.msg });
 
@@ -1011,21 +1047,30 @@ app.get('/viewCertificate/:id', (req,res) => {
 
 })
 
+app.get('/deleteCertificate/:id', async (req,res) => {
+    pool.get_connection(qb => {
+        qb.delete('tbl_certificate',{ id: id }, (err) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err });
+            res.send({ status: true, message: 'certificate deleted successfully.' });
+        });
+    });
+})
+
+
 //returns a list of all completed courses
 //this list can be presented to show the number of courses completed by the user
-app.get('/getAllCertificates/:userId',(req,res) => {
-
+app.get('/getAllCertificates/:userId',async (req,res) => {
     pool.get_connection(qb  => {
-
-        qb.select('*')
-            .where('studentId', req.params.userId)
-            .get(certTableName, (err, response) => {
-                qb.release();
-                if (err) return res.send({ status: false, message: err.msg });
-                
-                return res.send({status:true,message:response})
-            })
-          })  
+    qb.select('*')
+        .where('studentId', req.params.userId)
+        .get('tbl_certificate', (err, response) => {
+            qb.release();
+            if (err) return res.send({ status: false, message: err.msg });
+            
+            return res.send({status:true,message:response})
+        })
+    })  
 })
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
