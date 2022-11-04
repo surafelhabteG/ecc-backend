@@ -12,8 +12,14 @@ const request = require('request');
 const QueryBuilder = require('node-querybuilder');
 const bodyParser = require('body-parser')
 const httpServer = require('http').createServer(app);
+const path = require('path')
 
+
+const staticPath = path.join(__dirname,'static')
+console.log(staticPath)
+app.use(express.static(staticPath))
 var nodemailer = require('nodemailer');
+
 const transporter = nodemailer.createTransport({
     port: 465,          
     host: "smtp.gmail.com",
@@ -23,6 +29,16 @@ const transporter = nodemailer.createTransport({
          },
     secure: true,
 });
+
+
+let userName = 'bisratdev@outlook.com'
+const transporter2 = nodemailer.createTransport({
+    service : 'hotmail',
+    auth : {
+        user : userName,
+        pass : 'Dever123'
+    }
+  });
 
 
 
@@ -64,8 +80,8 @@ const requestPromise = require('request-promise');
 
 
 // convert base64 string into actual file.
-async function convertBase64ToImage(data, fileName) {
-    const url = `./public/uploads/ids/${fileName}`;
+async function convertBase64ToImage(data, fileName, directory = 'ids') {
+    const url = `./public/uploads/${directory}/${fileName}`;
     data = data.split("base64,");
 
     if (data[0].includes('data:image')) {
@@ -440,13 +456,25 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
 app.post('/createEnrollmentRequest', async (req, res) => {
     req.body.id = uuid().replace('-', '');
 
-    pool.get_connection(qb => {
-        qb.insert('tbl_enrollment_request', req.body, (err) => {
-            qb.release();
-            if (err) return res.status(200).send({ status: false, message: err });
-            res.send({ status: true, message: 'request created successfully.' });
+    let uploadresult = convertBase64ToImage(req.body.traineelist, `requests/${req.body.id}`);
+
+    if(uploadresult.status){
+        uploadresult = convertBase64ToImage(req.body.bankSlip,`requests/${req.body.id}`);
+    }
+
+    if(uploadresult.status){
+        pool.get_connection(qb => {
+            qb.insert('tbl_enrollment_request', req.body, (err) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err });
+                res.send({ status: true, message: 'request created successfully.' });
+            });
         });
-    });
+
+    } else {
+        res.status(200).send(uploadresult);
+    }
+
 });
 
 app.post('/updateEnrollmentRequest', (req, res) => {
@@ -711,5 +739,365 @@ app.post('/contactUs', async (req, res) => {
      });
 });
 
+
+
+//create certificate for user who has completed all course requirements
+//this is the certificate table name
+
+let certTableName = 'tbl_certificate'
+
+app.post('/generateCertificate',(req,res) => {
+    
+    req.body.id = uuid().replace('-', '');
+   
+    pool.get_connection(qb => {
+
+        qb.insert(certTableName , req.body , err => {
+
+            qb.release()
+
+            if (err) return res.send({ status: false, message: err });
+
+            res.send({ status: true, message: { id: req.body.id } });
+
+            const mailData = {
+                from: userName,
+                to: req.body.email,
+                subject: `Congragulation ${req.body.studentName} on completing ${req.body.courseName} course`,
+                text: `To view and collect head over to ___ and click the generate certificate button `,
+
+            };
+
+            transporter2.sendMail(mailData, function (err, info) {
+                if(err){
+
+                } else {
+            
+                }   
+             });
+        
+        })
+
+
+    })
+
+
+})
+
+app.get('/viewCertificate/:id', (req,res) => {
+    
+    pool.get_connection(qb  => {
+
+        qb.select('*')
+            .where('id', req.params.id)
+            .get(certTableName, async (err, response) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.msg });
+
+                response = await response[0];
+
+
+                res.send(`
+        
+                <!DOCTYPE html>
+                <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Congragulation ${response.studentName.toUpperCase()}</title>
+                        <style>
+                        
+                        .cont {
+
+
+                            display: grid;
+                        
+                            grid-template-columns: repeat(12,1fr);
+                        
+                            padding: 30px;
+                        
+                            background-color: rgb(78, 207, 78);
+                        
+                            height:100vh;
+                        }
+                        
+                        .cert {
+                        
+                        
+                            grid-column-start: 3;
+                        
+                            grid-column-end: 11;
+                        
+                            background-color: white;
+                        
+                            border-color: gray;
+                        
+                            height: auto;
+                        
+                            display: grid;
+                        
+                            grid-template-rows: repeat(12,1fr);
+                        
+                        
+                        
+                        }
+                        
+                        .head {
+                        
+                            grid-row-start: 1;
+                        
+                            grid-row-end: 4;
+                        
+                            background-color: white;
+                        
+                            border-radius: 20%;
+                        
+                            display: flex;
+                        
+                            align-items: center;
+                        
+                            justify-content: center;
+                        
+                        
+                        }
+                        
+                        .logo {
+                        
+                            background-color:darkblue;
+                        
+                            height: 90px;
+                        
+                            width: 90px;
+                        
+                            border-radius: 100%;
+                        
+                        
+                        }
+                        .body {
+                        
+                            grid-row-start: 4;
+                        
+                            grid-row-end: 11;
+                        
+                            background-color: white;
+                        
+                            display: flex;
+                        
+                            align-items: center;
+                        
+                            flex-direction: column;
+                        
+                        }
+                        
+                        .certificateText {
+                        
+                            font-size: 70px;
+                        
+                            color:brown;
+                        
+                        }
+                        
+                        .achivementText {
+                        
+                            font-size:30px;
+                        
+                            color: brown;
+                        
+                        
+                        }
+                        
+                        .presenedTo {
+                            margin-top: 30px;
+                        }
+                        
+                        .studentname {
+                        
+                            font-style: italic;
+                        
+                            font-size: 40px;
+                        
+                            color:rgb(32, 17, 17);
+                        
+                            margin: 30px;
+                        
+                            border-bottom: 2px dashed gray;
+                        
+                        }
+                        
+                        
+                        .courseInfo {
+                        
+                            font-size: medium;
+                        
+                            color:gray;
+                        
+                        }
+                        .footer {
+                        
+                            grid-row-start: 11;
+                        
+                            grid-row-end: 13;
+                        
+                            border-radius: 10%;
+                        
+                            display: grid;
+                        
+                            grid-template-columns: repeat(12,1fr);
+                        
+                        }
+                        
+                        .dateCont {
+                        
+                            grid-column-start: 4;
+                        
+                            grid-column-end: 7;
+                        
+                            background-color: azure;
+                        
+                            display: flex;
+                        
+                            flex-direction: column;
+                        
+                            align-items: center;
+                        
+                            font-size: large;
+                        
+                            gap: 3px 3px;
+                        
+                            padding-top: 3px;
+                        
+                        }
+                        
+                        .date {
+                        
+                            border-bottom: 1px dashed gray;
+                        
+                        }
+                        
+                        .issuedByCont {
+                        
+                            grid-column-start: 7;
+                        
+                            grid-column-end: 10;
+                        
+                            background-color: white;
+                        
+                            display: flex;
+                        
+                            flex-direction: column;
+                        
+                            align-items: center;
+                        
+                            font-size: large;
+                        
+                            gap: 2px 2px;
+                        
+                            
+                        
+                        
+                        
+                        }
+                        
+                        .issuedBy {
+                        
+                            border-bottom: 1px dashed gray;
+                        
+                        }
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        </style>
+                    </head>
+                    <body>
+                        <div class="cont">
+                           <div class="cert">
+                               <div class="head">
+                                   <img class="logo" src="http://3.122.238.52/dist/images/canvas_logomark_only@2x-e197434829.png"/>
+                               </div>
+                               <div class="body">
+   
+                                   <div class="certificateText">
+                                       CERTIFICATE
+                                   </div>
+                                   <div class="achivementText">
+                                        OF ACHIEVEMENT
+                                   </div>
+   
+                                   <div class="presenedTo">
+                                       THIS CERTIFICATE IS PRESENTED TO
+                                   </div>
+   
+                                   <div class="studentname">
+                                       
+                                           
+                                           ${response.studentName.toUpperCase()}
+                                   
+                                       
+                                       
+                                   </div>
+   
+                                   <div class="courseInfo">
+                                       PERSON ABOVE HAS COMPLETED THE ${response.courseName.toUpperCase()}
+                                   </div>
+   
+                               </div>
+                               <div class="footer">
+                               
+                                   <div class="dateCont">
+   
+                                       <span class="date">${response.createdAt}</span>
+                                   
+                                       <span>DATE</span>
+   
+                                   </div>
+   
+                                   <div class="issuedByCont">
+                                       
+                                       <span class="issuedBy">
+                                           ECC
+                                       </span>
+   
+                                       <span>
+                                           ISSUED BY
+                                       </span>
+                                   </div>
+                               </div>
+                           
+                           </div>
+                        </div>
+                    </body>
+                 </html>
+        
+        
+                `)
+            });
+
+    })
+
+})
+
+//returns a list of all completed courses
+//this list can be presented to show the number of courses completed by the user
+app.get('/getAllCertificates/:userId',(req,res) => {
+
+    pool.get_connection(qb  => {
+
+        qb.select('*')
+            .where('studentId', req.params.userId)
+            .get(certTableName, (err, response) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.msg });
+                
+                return res.send({status:true,message:response})
+            })
+          })  
+})
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
