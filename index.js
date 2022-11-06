@@ -14,10 +14,9 @@ const bodyParser = require('body-parser')
 const httpServer = require('http').createServer(app);
 const path = require('path')
 
-
 const staticPath = path.join(__dirname,'static')
-console.log(staticPath)
 app.use(express.static(staticPath))
+
 var nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
@@ -52,9 +51,8 @@ let redisClient;
   await redisClient.connect();
 })();
 
-
 app.use(morgan('dev'));
-app.use(express.static('public'));
+
 app.use(express.json({ limit: '25mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -63,7 +61,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -71,30 +69,40 @@ const port = process.env.PORT || 4000;
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
 require('dotenv').config();
+const fs = require("fs")
 
 const requestPromise = require('request-promise');
 
-
 // convert base64 string into actual file.
 async function convertBase64ToImage(data, fileName, directory = 'ids') {
-    const url = `./public/uploads/${directory}/${fileName}`;
+    var url = `${staticPath}/uploads/${directory}/`;
     data = data.split("base64,");
 
     if (data[0].includes('data:image')) {
-        const buffer = Buffer.from(data[1], "base64");
-        await base64.decode(buffer, { fname: url, ext: 'jpeg' });
+        try {
 
-        Jimp.read(`${url}.jpeg`, async (err, image) => {
-            if (err) {
-                return {
-                    status: false, message: err
-                };
-            } else {
-                await image.quality(40).write(`${url}.jpeg`);
-                return true;
+            if (!fs.existsSync(url)) {
+                fs.mkdirSync(url, { recursive: true });   
+            } 
+
+            const buffer = Buffer.from(data[1], "base64");
+            await base64.decode(buffer, { fname: `${url}${fileName}`, ext: 'jpeg' });
+
+            Jimp.read(`${url}${fileName}.jpeg`, async (err, image) => {
+                if (err) {
+                    return {
+                        status: false, message: err
+                    };
+                } else {
+                    await image.quality(40).write(`${url}${fileName}.jpeg`);
+                    return true;
+                }
+            });
+        } catch(err) {
+            return {
+                status: false, message: err.message
             }
-        });
-
+        }
     } else {
         return {
             status: false, message: 'Only image is allowed to upload. please try again.'
@@ -436,7 +444,7 @@ app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
             .get('tbl_enrollment_request', (err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.msg });
-                res.send(response);
+                res.statue(200).send(response);
             });
     });
 });
@@ -501,7 +509,7 @@ app.post('/register', async (req, res) => {
                     canvasAPI.storeCustomData(url, custom_data).then((response) => {
                         if (response) {
 
-                            const result = { status: true };
+                            var result = { status: true };
 
                             if (memberId !== undefined) {
                                 result = convertBase64ToImage(memberId, id);
@@ -551,11 +559,12 @@ app.post('/login', async (req, res) => {
                       });
                     res.status(200).send({
                         status: true,
-                        message: 'a'
+                        message: response
                     });
                 } else {
                     canvasAPI.getUserCustomData(response.id).then(async (customData) => {
-                        let profile = { ...response, ...customData.data };
+                        let profile = { ...response, ...{ profile: customData.data }};
+
                         await redisClient.set(`auth/${profile.access_token}`, JSON.stringify(profile));
 
                         res.status(200).send({
@@ -563,31 +572,31 @@ app.post('/login', async (req, res) => {
                             message: profile
                         });
     
-                    }).catch((errors) => {
+                    }).catch((err) => {
                         res.status(200).send({
                             status: false,
-                            message: 'b'
+                            message: err.message
                         })
                     });
                 }
-            }).catch((errors) => {
+            }).catch((err) => {
                 res.status(200).send({
                     status: false,
-                    message: 'c'
+                    message: err.message
                 })
             });
     
-        }).catch((errors) => {
+        }).catch((err) => {
             res.status(200).send({
                 status: false,
-                message: 'd'
+                message: err.message
             })
         });
 
     } catch (err) {
         res.status(200).send({
             status: false,
-            message: 'e'
+            message: err.message
         })
     }
 
@@ -598,15 +607,16 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/updateProfile/:userId', (req, res) => {
-    let url = `/users/${req.params.userId}/custom_data/profile?ns=extraInfo`;
-    let message = "profile updated successfully";
+    var url = `/users/${req.params.userId}/custom_data/profile?ns=extraInfo`;
+    var message = "profile updated successfully. relogin to get updated data.";
+    var custom_data = req.body.custom_data;
 
-    canvasAPI.storeCustomData(url, req.body.custom_data).then((response) => {
+    canvasAPI.storeCustomData(url, custom_data).then((response) => {
         if (response) {
 
-            const result = { status: true };
+            var result = { status: true };
 
-            if (req.body.memberId !== undefined) {
+            if (req.body.memberId !== null) {
                 result = convertBase64ToImage(req.body.memberId, req.params.userId);
                 !result.status ? message = `${message}, but unable to upload file.` : null;
             }
@@ -630,7 +640,7 @@ app.post('/saveMyEducation/:userId', (req, res) => {
 
     canvasAPI.storeCustomData(url, req.body.custom_data).then((response) => {
         if (response) {
-            res.status(200).send({ status: true, message: 'education updated successfully.' });
+            res.status(200).send({ status: true, message: 'education updated successfully. relogin to get updated data.' });
 
         } else {
             res.status(200).send({ status: false, message: 'fail to update the education.' });
@@ -742,7 +752,7 @@ app.post('/generateCertificate',(req,res) => {
                 text: `To view and collect head over to ___ and click the generate certificate button `,
             };
 
-            transporter2.sendMail(mailData, function (err, info) {
+            transporter.sendMail(mailData, function (err, info) {
                 if(err){
 
                 } else {
