@@ -61,7 +61,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: '',
+    password: 'Abcd@5304',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -114,8 +114,8 @@ async function updatePaymentSideeffect(data){
     pool.get_connection(qb => {
         qb.update('tbl_payment_sideeffect', data, { id: data.id }, (err) => {
             qb.release();
-            if (err) return res.send({ status: false, message: err });
-            res.send({ status: true, message: 'data updated successfully.' });
+            if (err) return { status: false, message: err.message };
+            return { status: true, message: 'success.' };
         });
     });
 }
@@ -217,7 +217,7 @@ app.get('/getCourseExtraInfo/:courseId', async (req, res) => {
     } catch (err) {
         res.status(200).send({
             status: false,
-            message: err
+            message: err.message
         })
     }
 });
@@ -225,45 +225,89 @@ app.get('/getCourseExtraInfo/:courseId', async (req, res) => {
 
 // Payment and sideEffect
 app.post('/createPaymentReference', async (req, res) => {
-    const requestOption = {
-        'method': 'POST',
-        'uri': `${process.env.MEDA_PAY_URL}`,
-        'body': JSON.stringify(req.body.data),
-        'headers': {
-           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.MEDA_PAY_TOKEN}`
-        }
-    };
+    try {
 
-      requestPromise(requestOption)
-      .then(function (response) {
-        response = JSON.parse(response);
+          const requestOption = {
+            'method': 'POST',
+            'uri': `${process.env.MEDA_PAY_URL}`,
+            'body': JSON.stringify(req.body.data),
+            'headers': {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.MEDA_PAY_TOKEN}`
+            }
+          };
+    
+          requestPromise(requestOption)
+          .then(async function (response) {
+            response = JSON.parse(response);
+    
+            let data = {
+                billReferenceNumber: response.billReferenceNumber,
+                id: req.body.data.metaData.paymentId,
+            };
+            
+            if (response.status == 'created') {
+                updatePaymentSideeffect(data);
+                res.status(200).send({ status: true, message: response });
+    
+            } else {
+                deletePaymentSideeffect(req.body.data.metaData.paymentId);
 
+                res.status(200).send({ 
+                    status: false, 
+                    message: 'unable to process the payment now. please try again later.' 
+                });
+            }        
+        })
+        .catch(function (error) {
+            let err = JSON.parse(error.error);
+    
+            res.status(200).send({ 
+                status: false, 
+                message: err.message
+            });
+        });
+
+    } catch (err) {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    }
+
+});
+
+app.post('/paymentSuccessCallBack', async (req, res) => {
+    try {
+
+        let response = req.body.data;
+    
         let data = {
             billReferenceNumber: response.billReferenceNumber,
-            id: req.body.data.metaData.paymentId,
+            id: response.metaData.paymentId,
         };
         
         if (response.status == 'created') {
             updatePaymentSideeffect(data);
             res.status(200).send({ status: true, message: response });
-
+    
         } else {
-            // deletePaymentSideeffect(req.body.data.metaData.paymentId);
+            deletePaymentSideeffect(response.metaData.paymentId);
             res.status(200).send({ 
                 status: false, 
                 message: 'unable to process the payment now. please try again later.' 
             });
-        }        
-    })
-    .catch(function (error) {
-        res.status(200).send({ 
-            status: false, 
-            message: error.message 
-        });
-    });
+        }  
+
+    } catch (err) {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    }
 
 });
+
 
 
 app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
@@ -288,9 +332,8 @@ app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
 
             updatePaymentSideeffect(data);
 
-            res.status(200).send({ 
-                status: true, 
-                message: 'success' 
+            res.status(200).send({
+                status: true, message: 'success'
             });
 
         } else {
@@ -329,7 +372,7 @@ app.post('/createPaymentSideeffect', (req, res) => {
     pool.get_connection(qb => {
         qb.insert('tbl_payment_sideeffect', req.body, (err) => {
             qb.release();
-            if (err) return res.send({ status: false, message: err });
+            if (err) return res.send({ status: false, message: err.msg });
             res.send({ status: true, message: { id: req.body.id } });
         });
     });
@@ -339,8 +382,8 @@ app.post('/updatePaymentSideeffect', (req, res) => {
     pool.get_connection(qb => {
         qb.update('tbl_payment_sideeffect', req.body, { id: req.body.id }, (err) => {
             qb.release();
-            if (err) return res.send({ status: false, message: err });
-            res.send({ status: true, message: 'data updated successfully.' });
+            if (err) return res.send({ status: false, message: err.msg });
+            res.send({ status: true, message: 'success.' });
         });
     });
 });
