@@ -61,7 +61,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -111,23 +111,35 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
 }
 
 async function updatePaymentSideeffect(data){
-    pool.get_connection(qb => {
-        qb.update('tbl_payment_sideeffect', data, { id: data.id }, (err) => {
-            qb.release();
-            if (err) return { status: false, message: err.message };
-            return { status: true, message: 'success.' };
+    try {
+
+        pool.get_connection(qb => {
+            qb.update('tbl_payment_sideeffect', data, { id: data.id }, (err) => {
+                qb.release();
+                if (err) return { status: false, message: err.message };
+                return { status: true, message: 'success.' };
+            });
         });
-    });
+
+    } catch(err){
+        return { status: false, message: err.message };
+    }
 }
 
 async function deletePaymentSideeffect(id){
-    pool.get_connection(qb => {
-        qb.delete('tbl_payment_sideeffect',{ id: id }, (err) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err });
-            res.send({ status: true, message: 'data deleted successfully.' });
+    try {
+        
+        pool.get_connection(qb => {
+            qb.delete('tbl_payment_sideeffect',{ id: id }, (err) => {
+                qb.release();
+                if (err) return { status: false, message: err };
+                return { status: true, message: 'data deleted successfully.' };
+            });
         });
-    });
+
+    } catch(err){
+        return { status: false, message: err.message };
+    }
 }
 
 // Course and other related
@@ -141,7 +153,10 @@ app.get('/getAllCourses', async (req, res) => {
 
         } else {
             canvasAPI.getAllCoursesInAccount(2).then( async (response) => { 
-                await redisClient.set('courses', JSON.stringify(response));
+                if(response.length){
+                    await redisClient.set('courses', JSON.stringify(response));
+                }
+
                 res.status(200).send(response);
   
             }).catch((errors) => {
@@ -251,10 +266,10 @@ app.post('/createPaymentReference', async (req, res) => {
                 res.status(200).send({ status: true, message: response });
     
             } else {
-                deletePaymentSideeffect(req.body.data.metaData.paymentId);
+                let result = deletePaymentSideeffect(req.body.data.metaData.paymentId);
 
                 res.status(200).send({ 
-                    status: false, 
+                    status: result.status, 
                     message: 'unable to process the payment now. please try again later.' 
                 });
             }        
@@ -292,9 +307,10 @@ app.post('/paymentSuccessCallBack', async (req, res) => {
             res.status(200).send({ status: true, message: response });
     
         } else {
-            deletePaymentSideeffect(response.metaData.paymentId);
+            let result = deletePaymentSideeffect(response.metaData.paymentId);
+
             res.status(200).send({ 
-                status: false, 
+                status: result.status, 
                 message: 'unable to process the payment now. please try again later.' 
             });
         }  
@@ -355,37 +371,54 @@ app.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
 });
 
 app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
-    pool.get_connection(qb => {
-        qb.select('*')
-            .where('id', req.params.paymentId)
-            .get('tbl_payment_sideeffect', (err, response) => {
-                qb.release();
-                if (err) return res.send({ status: false, message: err.msg });
-                res.send(response);
-            });
-    });
+    try {
+        
+        pool.get_connection(qb => {
+            qb.select('*')
+                .where('id', req.params.paymentId)
+                .get('tbl_payment_sideeffect', (err, response) => {
+                    qb.release();
+                    if (err) return res.send({ status: false, message: err.sqlMessage });
+                    res.send(response);
+                });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 app.post('/createPaymentSideeffect', (req, res) => {
     req.body.id = uuid().replace('-', '');
 
-    pool.get_connection(qb => {
-        qb.insert('tbl_payment_sideeffect', req.body, (err) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err.msg });
-            res.send({ status: true, message: { id: req.body.id } });
+    try {
+    
+        pool.get_connection(qb => {
+            qb.insert('tbl_payment_sideeffect', req.body, (err) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.sqlMessage });
+                res.send({ status: true, message: { id: req.body.id } });
+            });
         });
-    });
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 app.post('/updatePaymentSideeffect', (req, res) => {
-    pool.get_connection(qb => {
-        qb.update('tbl_payment_sideeffect', req.body, { id: req.body.id }, (err) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err.msg });
-            res.send({ status: true, message: 'success.' });
+    try {
+        pool.get_connection(qb => {
+            qb.update('tbl_payment_sideeffect', req.body, { id: req.body.id }, (err) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.sqlMessage });
+                res.send({ status: true, message: 'success.' });
+            });
         });
-    });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 
@@ -436,70 +469,97 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
 
 // enrollment request
 app.post('/createEnrollmentRequest', async (req, res) => {
-    req.body.id = uuid().replace('-', '');
+    try {
 
-    let uploadresult = convertBase64ToImage(req.body.traineelist, `requests/${req.body.id}`);
-
-    if(uploadresult.status){
-        uploadresult = convertBase64ToImage(req.body.bankSlip,`requests/${req.body.id}`);
-    }
-
-    if(uploadresult.status){
-        pool.get_connection(qb => {
-            qb.insert('tbl_enrollment_request', req.body, (err) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err });
-                res.send({ status: true, message: 'request created successfully.' });
+        req.body.id = uuid().replace('-', '');
+    
+        let uploadresult = convertBase64ToImage(req.body.traineelist, `requests/${req.body.id}`);
+    
+        if(uploadresult.status){
+            uploadresult = convertBase64ToImage(req.body.bankSlip,`requests/${req.body.id}`);
+        }
+    
+        if(uploadresult.status){
+            pool.get_connection(qb => {
+                qb.insert('tbl_enrollment_request', req.body, (err) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err });
+                    res.send({ status: true, message: 'request created successfully.' });
+                });
             });
-        });
-
-    } else {
-        res.status(200).send(uploadresult);
+    
+        } else {
+            res.status(200).send(uploadresult);
+        }
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
     }
 
 });
 
 app.post('/updateEnrollmentRequest', (req, res) => {
-    pool.get_connection(qb => {
-        qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
-            qb.release();
-            if (err) return res.status(200).send({ status: false, message: err });
-            res.send({ status: true, message: 'request updated successfully.' });
+    try {
+        pool.get_connection(qb => {
+            qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err });
+                res.send({ status: true, message: 'request updated successfully.' });
+            });
         });
-    });
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 app.get('/getAllEnrollmentRequest', (req, res) => {
-    pool.get_connection(qb => {
-        qb.select('*')
-            .get('tbl_enrollment_request', (err, response) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err.msg });
-                res.send(response);
-            });
-    });
+    try {
+        pool.get_connection(qb => {
+            qb.select('*')
+                .get('tbl_enrollment_request', (err, response) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                    res.send(response);
+                });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
-    pool.get_connection(qb => {
-        qb.select('*')
-        .where('id', req.params.id)
-            .get('tbl_enrollment_request', (err, response) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err.msg });
-                res.statue(200).send(response);
-            });
-    });
+    try {
+
+        pool.get_connection(qb => {
+            qb.select('*')
+            .where('id', req.params.id)
+                .get('tbl_enrollment_request', (err, response) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                    res.statue(200).send(response);
+                });
+        });
+    
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 app.get('/deleteEnrollmentRequest/:id', (req, res) => {
-    pool.get_connection(qb => {
-        qb.delete('tbl_enrollment_request',{ id: id }, (err) => {
-            qb.release();
-            if (err) return res.status(200).send({ status: false, message: err });
-            res.status(200).send({ status: true, message: 'data deleted successfully.' });
+    try {
+        pool.get_connection(qb => {
+            qb.delete('tbl_enrollment_request',{ id: id }, (err) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err });
+                res.status(200).send({ status: true, message: 'data deleted successfully.' });
+            });
         });
-    });
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 });
 
 
@@ -776,354 +836,378 @@ app.post('/contactUs', async (req, res) => {
 
 
 app.post('/generateCertificate',(req,res) => {
-    req.body.id = uuid().replace('-', '');
-   
-    pool.get_connection(qb => {
-
-        qb.insert('tbl_certificate' , req.body , err => {
-
-            qb.release()
-
-            if (err) return res.send({ status: false, message: err });
-
-            res.send({ status: true, message: { id: req.body.id } });
-
-            const mailData = {
-                from: userName,
-                to: req.body.email,
-                subject: `Congragulation ${req.body.studentName} on completing ${req.body.courseName} course`,
-                text: `To view and collect head over to ___ and click the generate certificate button `,
-            };
-
-            transporter.sendMail(mailData, function (err, info) {
-                if(err){
-
-                } else {
-            
-                }   
-             });
+    try {
+        req.body.id = uuid().replace('-', '');
+       
+        pool.get_connection(qb => {
+    
+            qb.insert('tbl_certificate' , req.body , err => {
+    
+                qb.release()
+    
+                if (err) return res.send({ status: false, message: err });
+    
+                res.send({ status: true, message: { id: req.body.id } });
+    
+                const mailData = {
+                    from: userName,
+                    to: req.body.email,
+                    subject: `Congragulation ${req.body.studentName} on completing ${req.body.courseName} course`,
+                    text: `To view and collect head over to ___ and click the generate certificate button `,
+                };
+    
+                transporter.sendMail(mailData, function (err, info) {
+                    if(err){
+    
+                    } else {
+                
+                    }   
+                 });
+            })
         })
-    })
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+    
 })
 
 app.get('/viewCertificate/:id', async (req,res) => {
-    pool.get_connection(qb  => {
-        qb.select('*')
-            .where('id', req.params.id)
-            .get('tbl_certificate', async (err, response) => {
-                qb.release();
-                if (err) return res.send({ status: false, message: err.msg });
+    try {
 
-                response = await response[0];
-                let view = `
-                <!DOCTYPE html>
-                <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>Congragulation ${response.studentName.toUpperCase()}</title>
-                        <style>
-                        
-                        .cont {
-
-
-                            display: grid;
-                        
-                            grid-template-columns: repeat(12,1fr);
-                        
-                            padding: 30px;
-                        
-                            background-color: rgb(78, 207, 78);
-                        
-                            height:100vh;
-                        }
-                        
-                        .cert {
-                        
-                        
-                            grid-column-start: 3;
-                        
-                            grid-column-end: 11;
-                        
-                            background-color: white;
-                        
-                            border-color: gray;
-                        
-                            height: auto;
-                        
-                            display: grid;
-                        
-                            grid-template-rows: repeat(12,1fr);
-                        
-                        
-                        
-                        }
-                        
-                        .head {
-                        
-                            grid-row-start: 1;
-                        
-                            grid-row-end: 4;
-                        
-                            background-color: white;
-                        
-                            border-radius: 20%;
-                        
-                            display: flex;
-                        
-                            align-items: center;
-                        
-                            justify-content: center;
-                        
-                        
-                        }
-                        
-                        .logo {
-                        
-                            background-color:darkblue;
-                        
-                            height: 90px;
-                        
-                            width: 90px;
-                        
-                            border-radius: 100%;
-                        
-                        
-                        }
-                        .body {
-                        
-                            grid-row-start: 4;
-                        
-                            grid-row-end: 11;
-                        
-                            background-color: white;
-                        
-                            display: flex;
-                        
-                            align-items: center;
-                        
-                            flex-direction: column;
-                        
-                        }
-                        
-                        .certificateText {
-                        
-                            font-size: 70px;
-                        
-                            color:brown;
-                        
-                        }
-                        
-                        .achivementText {
-                        
-                            font-size:30px;
-                        
-                            color: brown;
-                        
-                        
-                        }
-                        
-                        .presenedTo {
-                            margin-top: 30px;
-                        }
-                        
-                        .studentname {
-                        
-                            font-style: italic;
-                        
-                            font-size: 40px;
-                        
-                            color:rgb(32, 17, 17);
-                        
-                            margin: 30px;
-                        
-                            border-bottom: 2px dashed gray;
-                        
-                        }
-                        
-                        
-                        .courseInfo {
-                        
-                            font-size: medium;
-                        
-                            color:gray;
-                        
-                        }
-                        .footer {
-                        
-                            grid-row-start: 11;
-                        
-                            grid-row-end: 13;
-                        
-                            border-radius: 10%;
-                        
-                            display: grid;
-                        
-                            grid-template-columns: repeat(12,1fr);
-                        
-                        }
-                        
-                        .dateCont {
-                        
-                            grid-column-start: 4;
-                        
-                            grid-column-end: 7;
-                        
-                            background-color: azure;
-                        
-                            display: flex;
-                        
-                            flex-direction: column;
-                        
-                            align-items: center;
-                        
-                            font-size: large;
-                        
-                            gap: 3px 3px;
-                        
-                            padding-top: 3px;
-                        
-                        }
-                        
-                        .date {
-                        
-                            border-bottom: 1px dashed gray;
-                        
-                        }
-                        
-                        .issuedByCont {
-                        
-                            grid-column-start: 7;
-                        
-                            grid-column-end: 10;
-                        
-                            background-color: white;
-                        
-                            display: flex;
-                        
-                            flex-direction: column;
-                        
-                            align-items: center;
-                        
-                            font-size: large;
-                        
-                            gap: 2px 2px;
-                        
+        pool.get_connection(qb  => {
+            qb.select('*')
+                .where('id', req.params.id)
+                .get('tbl_certificate', async (err, response) => {
+                    qb.release();
+                    if (err) return res.send({ status: false, message: err.sqlMessage });
+    
+                    response = await response[0];
+                    let view = `
+                    <!DOCTYPE html>
+                    <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Congragulation ${response.studentName.toUpperCase()}</title>
+                            <style>
                             
-                        
-                        
-                        
-                        }
-                        
-                        .issuedBy {
-                        
-                            border-bottom: 1px dashed gray;
-                        
-                        }
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        </style>
-                    </head>
-                    <body>
-                        <div class="cont">
-                           <div class="cert">
-                               <div class="head">
-                                   <img class="logo" src="http://3.122.238.52/dist/images/canvas_logomark_only@2x-e197434829.png"/>
-                               </div>
-                               <div class="body">
-   
-                                   <div class="certificateText">
-                                       CERTIFICATE
+                            .cont {
+    
+    
+                                display: grid;
+                            
+                                grid-template-columns: repeat(12,1fr);
+                            
+                                padding: 30px;
+                            
+                                background-color: rgb(78, 207, 78);
+                            
+                                height:100vh;
+                            }
+                            
+                            .cert {
+                            
+                            
+                                grid-column-start: 3;
+                            
+                                grid-column-end: 11;
+                            
+                                background-color: white;
+                            
+                                border-color: gray;
+                            
+                                height: auto;
+                            
+                                display: grid;
+                            
+                                grid-template-rows: repeat(12,1fr);
+                            
+                            
+                            
+                            }
+                            
+                            .head {
+                            
+                                grid-row-start: 1;
+                            
+                                grid-row-end: 4;
+                            
+                                background-color: white;
+                            
+                                border-radius: 20%;
+                            
+                                display: flex;
+                            
+                                align-items: center;
+                            
+                                justify-content: center;
+                            
+                            
+                            }
+                            
+                            .logo {
+                            
+                                background-color:darkblue;
+                            
+                                height: 90px;
+                            
+                                width: 90px;
+                            
+                                border-radius: 100%;
+                            
+                            
+                            }
+                            .body {
+                            
+                                grid-row-start: 4;
+                            
+                                grid-row-end: 11;
+                            
+                                background-color: white;
+                            
+                                display: flex;
+                            
+                                align-items: center;
+                            
+                                flex-direction: column;
+                            
+                            }
+                            
+                            .certificateText {
+                            
+                                font-size: 70px;
+                            
+                                color:brown;
+                            
+                            }
+                            
+                            .achivementText {
+                            
+                                font-size:30px;
+                            
+                                color: brown;
+                            
+                            
+                            }
+                            
+                            .presenedTo {
+                                margin-top: 30px;
+                            }
+                            
+                            .studentname {
+                            
+                                font-style: italic;
+                            
+                                font-size: 40px;
+                            
+                                color:rgb(32, 17, 17);
+                            
+                                margin: 30px;
+                            
+                                border-bottom: 2px dashed gray;
+                            
+                            }
+                            
+                            
+                            .courseInfo {
+                            
+                                font-size: medium;
+                            
+                                color:gray;
+                            
+                            }
+                            .footer {
+                            
+                                grid-row-start: 11;
+                            
+                                grid-row-end: 13;
+                            
+                                border-radius: 10%;
+                            
+                                display: grid;
+                            
+                                grid-template-columns: repeat(12,1fr);
+                            
+                            }
+                            
+                            .dateCont {
+                            
+                                grid-column-start: 4;
+                            
+                                grid-column-end: 7;
+                            
+                                background-color: azure;
+                            
+                                display: flex;
+                            
+                                flex-direction: column;
+                            
+                                align-items: center;
+                            
+                                font-size: large;
+                            
+                                gap: 3px 3px;
+                            
+                                padding-top: 3px;
+                            
+                            }
+                            
+                            .date {
+                            
+                                border-bottom: 1px dashed gray;
+                            
+                            }
+                            
+                            .issuedByCont {
+                            
+                                grid-column-start: 7;
+                            
+                                grid-column-end: 10;
+                            
+                                background-color: white;
+                            
+                                display: flex;
+                            
+                                flex-direction: column;
+                            
+                                align-items: center;
+                            
+                                font-size: large;
+                            
+                                gap: 2px 2px;
+                            
+                                
+                            
+                            
+                            
+                            }
+                            
+                            .issuedBy {
+                            
+                                border-bottom: 1px dashed gray;
+                            
+                            }
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            </style>
+                        </head>
+                        <body>
+                            <div class="cont">
+                               <div class="cert">
+                                   <div class="head">
+                                       <img class="logo" src="http://3.122.238.52/dist/images/canvas_logomark_only@2x-e197434829.png"/>
                                    </div>
-                                   <div class="achivementText">
-                                        OF ACHIEVEMENT
-                                   </div>
-   
-                                   <div class="presenedTo">
-                                       THIS CERTIFICATE IS PRESENTED TO
-                                   </div>
-   
-                                   <div class="studentname">
+                                   <div class="body">
+       
+                                       <div class="certificateText">
+                                           CERTIFICATE
+                                       </div>
+                                       <div class="achivementText">
+                                            OF ACHIEVEMENT
+                                       </div>
+       
+                                       <div class="presenedTo">
+                                           THIS CERTIFICATE IS PRESENTED TO
+                                       </div>
+       
+                                       <div class="studentname">
+                                           
+                                               
+                                               ${response.studentName.toUpperCase()}
                                        
                                            
-                                           ${response.studentName.toUpperCase()}
+                                           
+                                       </div>
+       
+                                       <div class="courseInfo">
+                                           PERSON ABOVE HAS COMPLETED THE ${response.courseName.toUpperCase()}
+                                       </div>
+       
+                                   </div>
+                                   <div class="footer">
                                    
+                                       <div class="dateCont">
+       
+                                           <span class="date">${response.createdAt}</span>
                                        
-                                       
+                                           <span>DATE</span>
+       
+                                       </div>
+       
+                                       <div class="issuedByCont">
+                                           
+                                           <span class="issuedBy">
+                                               ECC
+                                           </span>
+       
+                                           <span>
+                                               ISSUED BY
+                                           </span>
+                                       </div>
                                    </div>
-   
-                                   <div class="courseInfo">
-                                       PERSON ABOVE HAS COMPLETED THE ${response.courseName.toUpperCase()}
-                                   </div>
-   
-                               </div>
-                               <div class="footer">
                                
-                                   <div class="dateCont">
-   
-                                       <span class="date">${response.createdAt}</span>
-                                   
-                                       <span>DATE</span>
-   
-                                   </div>
-   
-                                   <div class="issuedByCont">
-                                       
-                                       <span class="issuedBy">
-                                           ECC
-                                       </span>
-   
-                                       <span>
-                                           ISSUED BY
-                                       </span>
-                                   </div>
                                </div>
-                           
-                           </div>
-                        </div>
-                    </body>
-                 </html>`
-
-                res.status(200).send({
-                    status: true, message : view
+                            </div>
+                        </body>
+                     </html>`
+    
+                    res.status(200).send({
+                        status: true, message : view
+                    });
                 });
-            });
-    })
+        })
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+    
 
 })
 
 app.get('/deleteCertificate/:id', async (req,res) => {
-    pool.get_connection(qb => {
-        qb.delete('tbl_certificate',{ id: id }, (err) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err });
-            res.send({ status: true, message: 'certificate deleted successfully.' });
+    try {
+        pool.get_connection(qb => {
+            qb.delete('tbl_certificate',{ id: id }, (err) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err });
+                res.send({ status: true, message: 'certificate deleted successfully.' });
+            });
         });
-    });
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 })
 
 
 //returns a list of all completed courses
 //this list can be presented to show the number of courses completed by the user
 app.get('/getAllCertificates/:userId',async (req,res) => {
-    pool.get_connection(qb  => {
-    qb.select('*')
-        .where('studentId', req.params.userId)
-        .get('tbl_certificate', (err, response) => {
-            qb.release();
-            if (err) return res.send({ status: false, message: err.msg });
-            
-            return res.send({status:true,message:response})
+    try {
+
+        pool.get_connection(qb  => {
+        qb.select('*')
+            .where('studentId', req.params.userId)
+            .get('tbl_certificate', (err, response) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.sqlMessage });
+                
+                return res.send({status:true,message:response})
+            })
         })
-    })  
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
 })
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
