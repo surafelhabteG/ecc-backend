@@ -41,6 +41,8 @@ const transporter2 = nodemailer.createTransport({
 
 const redis = require('redis');
 
+const date = require('date-and-time');
+
 let redisClient;
 
 (async () => {
@@ -61,7 +63,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: '',
+    password: 'Abcd@5304',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -815,6 +817,7 @@ app.post('/contactUs', async (req, res) => {
         to: 'surafel@360ground.com',
         subject: `contactus message from ${req.body.fullName}, phone number : ${req.body.phoneNumber}`,
         text: req.body.message,
+
     };
     transporter.sendMail(mailData, function (err, info) {
         if(err){
@@ -850,7 +853,7 @@ app.post('/generateCertificate',(req,res) => {
                 res.send({ status: true, message: { id: req.body.id } });
     
                 const mailData = {
-                    from: userName,
+                    from: 'surafel@360ground.com',
                     to: req.body.email,
                     subject: `Congragulation ${req.body.studentName} on completing ${req.body.courseName} course`,
                     text: `To view and collect head over to ___ and click the generate certificate button `,
@@ -883,302 +886,25 @@ app.get('/viewCertificate/:id', async (req,res) => {
                     if (err) return res.send({ status: false, message: err.sqlMessage });
     
                     response = await response[0];
-                    let view = `
-                    <!DOCTYPE html>
-                    <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <title>Congragulation ${response.studentName.toUpperCase()}</title>
-                            <style>
-                            
-                            .cont {
-    
-    
-                                display: grid;
-                            
-                                grid-template-columns: repeat(12,1fr);
-                            
-                                padding: 30px;
-                            
-                                background-color: rgb(78, 207, 78);
-                            
-                                height:100vh;
-                            }
-                            
-                            .cert {
-                            
-                            
-                                grid-column-start: 3;
-                            
-                                grid-column-end: 11;
-                            
-                                background-color: white;
-                            
-                                border-color: gray;
-                            
-                                height: auto;
-                            
-                                display: grid;
-                            
-                                grid-template-rows: repeat(12,1fr);
-                            
-                            
-                            
-                            }
-                            
-                            .head {
-                            
-                                grid-row-start: 1;
-                            
-                                grid-row-end: 4;
-                            
-                                background-color: white;
-                            
-                                border-radius: 20%;
-                            
-                                display: flex;
-                            
-                                align-items: center;
-                            
-                                justify-content: center;
-                            
-                            
-                            }
-                            
-                            .logo {
-                            
-                                background-color:darkblue;
-                            
-                                height: 90px;
-                            
-                                width: 90px;
-                            
-                                border-radius: 100%;
-                            
-                            
-                            }
-                            .body {
-                            
-                                grid-row-start: 4;
-                            
-                                grid-row-end: 11;
-                            
-                                background-color: white;
-                            
-                                display: flex;
-                            
-                                align-items: center;
-                            
-                                flex-direction: column;
-                            
-                            }
-                            
-                            .certificateText {
-                            
-                                font-size: 70px;
-                            
-                                color:brown;
-                            
-                            }
-                            
-                            .achivementText {
-                            
-                                font-size:30px;
-                            
-                                color: brown;
-                            
-                            
-                            }
-                            
-                            .presenedTo {
-                                margin-top: 30px;
-                            }
-                            
-                            .studentname {
-                            
-                                font-style: italic;
-                            
-                                font-size: 40px;
-                            
-                                color:rgb(32, 17, 17);
-                            
-                                margin: 30px;
-                            
-                                border-bottom: 2px dashed gray;
-                            
-                            }
-                            
-                            
-                            .courseInfo {
-                            
-                                font-size: medium;
-                            
-                                color:gray;
-                            
-                            }
-                            .footer {
-                            
-                                grid-row-start: 11;
-                            
-                                grid-row-end: 13;
-                            
-                                border-radius: 10%;
-                            
-                                display: grid;
-                            
-                                grid-template-columns: repeat(12,1fr);
-                            
-                            }
-                            
-                            .dateCont {
-                            
-                                grid-column-start: 4;
-                            
-                                grid-column-end: 7;
-                            
-                                background-color: azure;
-                            
-                                display: flex;
-                            
-                                flex-direction: column;
-                            
-                                align-items: center;
-                            
-                                font-size: large;
-                            
-                                gap: 3px 3px;
-                            
-                                padding-top: 3px;
-                            
-                            }
-                            
-                            .date {
-                            
-                                border-bottom: 1px dashed gray;
-                            
-                            }
-                            
-                            .issuedByCont {
-                            
-                                grid-column-start: 7;
-                            
-                                grid-column-end: 10;
-                            
-                                background-color: white;
-                            
-                                display: flex;
-                            
-                                flex-direction: column;
-                            
-                                align-items: center;
-                            
-                                font-size: large;
-                            
-                                gap: 2px 2px;
-                            
-                                
-                            
-                            
-                            
-                            }
-                            
-                            .issuedBy {
-                            
-                                border-bottom: 1px dashed gray;
-                            
-                            }
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            </style>
-                        </head>
-                        <body>
-                            <div class="cont">
-                               <div class="cert">
-                                   <div class="head">
-                                       <img class="logo" src="http://3.122.238.52/dist/images/canvas_logomark_only@2x-e197434829.png"/>
-                                   </div>
-                                   <div class="body">
-       
-                                       <div class="certificateText">
-                                           CERTIFICATE
-                                       </div>
-                                       <div class="achivementText">
-                                            OF ACHIEVEMENT
-                                       </div>
-       
-                                       <div class="presenedTo">
-                                           THIS CERTIFICATE IS PRESENTED TO
-                                       </div>
-       
-                                       <div class="studentname">
-                                           
-                                               
-                                               ${response.studentName.toUpperCase()}
-                                       
-                                           
-                                           
-                                       </div>
-       
-                                       <div class="courseInfo">
-                                           PERSON ABOVE HAS COMPLETED THE ${response.courseName.toUpperCase()}
-                                       </div>
-       
-                                   </div>
-                                   <div class="footer">
-                                   
-                                       <div class="dateCont">
-       
-                                           <span class="date">${response.createdAt}</span>
-                                       
-                                           <span>DATE</span>
-       
-                                       </div>
-       
-                                       <div class="issuedByCont">
-                                           
-                                           <span class="issuedBy">
-                                               ECC
-                                           </span>
-       
-                                           <span>
-                                               ISSUED BY
-                                           </span>
-                                       </div>
-                                   </div>
-                               
-                               </div>
-                            </div>
-                        </body>
-                     </html>`
-    
-                    res.status(200).send({
-                        status: true, message : view
-                    });
+                    response.createdAt = date.format(response.createdAt, 'YYYY/MM/DD HH:mm:ss');
+                    
+                    return res.render('certificate.ejs',response);
+
                 });
         })
 
     } catch(err){
-        res.status(200).send({ status: false, message: err.message });
+        return res.status(200).send({ status: false, message: err.message });
     }
     
-
 })
 
-app.get('/deleteCertificate/:id', async (req,res) => {
+app.delete('/deleteCertificate/:id', async (req,res) => {
     try {
         pool.get_connection(qb => {
-            qb.delete('tbl_certificate',{ id: id }, (err) => {
+            qb.delete('tbl_certificate',{ id: req.params.id }, (err) => {
                 qb.release();
-                if (err) return res.send({ status: false, message: err });
+                if (err) return res.send({ status: false, message: err.sqlMessage });
                 res.send({ status: true, message: 'certificate deleted successfully.' });
             });
         });
