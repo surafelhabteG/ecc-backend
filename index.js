@@ -390,6 +390,25 @@ app.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
     }
 });
 
+app.post('/checkPaymnetSettlement', (req, res) => {
+    try {
+        
+        pool.get_connection(qb => {
+            qb.select('*')
+                .where('studentId', req.body.studentId)
+                .where('courseId', req.body.courseId)
+                .get('tbl_payment_sideeffect', (err, response) => {
+                    qb.release();
+                    if (err) return res.send({ status: false, message: err.sqlMessage });
+                    res.send(response);
+                });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
 app.post('/createPaymentSideeffect', (req, res) => {
     req.body.id = uuid().replace('-', '');
 
