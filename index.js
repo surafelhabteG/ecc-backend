@@ -156,7 +156,10 @@ app.get('/getAllCourses', async (req, res) => {
         } else {
             canvasAPI.getAllCoursesInAccount(2).then( async (response) => { 
                 if(response.length){
-                    await redisClient.set('courses', JSON.stringify(response));
+                    await redisClient.set('courses', JSON.stringify(response), {
+                        EX: 300,
+                        NX: true,
+                    });
                 }
 
                 res.status(200).send(response);
@@ -186,7 +189,10 @@ app.get('/getAllModules/:courseId', async (req, res) => {
 
         } else {
             canvasAPI.getModules(req.params.courseId).then(async (response) => {
-                await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response));
+                await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
+                    EX: 300,
+                    NX: true,
+                  });
                 res.status(200).send(response);
             }).catch((errors) => {
                 res.status(200).send({
@@ -218,7 +224,10 @@ app.get('/getCourseExtraInfo/:courseId', async (req, res) => {
         
                 request.get(file.url, async function (error, response, body) {
                     if (!error && response.statusCode == 200) {
-                        await redisClient.set(`courseExtraInfo/${req.params.courseId}`, body);
+                        await redisClient.set(`courseExtraInfo/${req.params.courseId}`, body, {
+                            EX: 300,
+                            NX: true,
+                          });
                         res.status(200).send(JSON.parse(body));
                     }
                 });
@@ -689,7 +698,10 @@ app.post('/login', async (req, res) => {
                     canvasAPI.getUserCustomData(response.id).then(async (customData) => {
                         let profile = { ...response, ...{ profile: customData.data }};
 
-                        await redisClient.set(`auth/${profile.access_token}`, JSON.stringify(profile));
+                        await redisClient.set(`auth/${profile.access_token}`, JSON.stringify(profile), {
+                            EX: 300,
+                            NX: true,
+                          });
 
                         res.status(200).send({
                             status: true,
