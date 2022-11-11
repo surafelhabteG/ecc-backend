@@ -406,10 +406,12 @@ app.post('/checkPaymnetSettlement', (req, res) => {
             qb.select('*')
                 .where('studentId', req.body.studentId)
                 .where('courseId', req.body.courseId)
+                .where('status', 'completed')
+
                 .get('tbl_payment_sideeffect', (err, response) => {
                     qb.release();
                     if (err) return res.send({ status: false, message: err.sqlMessage });
-                    res.send(response);
+                    res.status(200).send({ status: true, message: response });
                 });
         });
 
