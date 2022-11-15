@@ -88,15 +88,16 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
             } 
 
             const buffer = Buffer.from(data[1], "base64");
-            await base64.decode(buffer, { fname: `${url}${fileName}`, ext: 'jpeg' });
+            let result = await base64.decode(buffer, { fname: `${url}${fileName}`, ext: 'jpeg' });
 
             Jimp.read(`${url}${fileName}.jpeg`, async (err, image) => {
                 if (err) {
                     return {
-                        status: false, message: err
+                        status: false, message: err.message
                     };
                 } else {
-                    await image.quality(40).write(`${url}${fileName}.jpeg`);
+                    Jimp.MIME_JPEG; // "image/jpeg"
+                    let result = await image.quality(40).write(`${url}${fileName}.jpeg`);
                     return true;
                 }
             });
@@ -645,7 +646,7 @@ app.post('/register', async (req, res) => {
 
                             var result = { status: true };
 
-                            if (memberId !== undefined) {
+                            if (memberId) {
                                 result = convertBase64ToImage(memberId, id);
                                 !result.status ? message = 'register successfully, but unable to upload file.' : null;
                             }
@@ -697,16 +698,27 @@ app.post('/login', async (req, res) => {
                     });
                 } else {
                     canvasAPI.getUserCustomData(response.id).then(async (customData) => {
-                        let profile = { ...response, ...{ profile: customData.data }};
+                        let data = { ...response, ...{ profile: customData.data }};
 
-                        await redisClient.set(`auth/${profile.access_token}`, JSON.stringify(profile), {
+                        // check & add member Id if it's exist
+                        let url = `${staticPath}/uploads/ids/${response.id}.jpeg`;
+
+                        if (fs.existsSync(url)) { 
+                            data.profile.memberId = `/uploads/ids/${response.id}.jpeg`;
+
+                        } else {
+                            data.profile.memberId = null;
+
+                        }
+
+                        await redisClient.set(`auth/${data.access_token}`, JSON.stringify(data), {
                             EX: 300,
                             NX: true,
                           });
 
                         res.status(200).send({
                             status: true,
-                            message: profile
+                            message: data
                         });
     
                     }).catch((err) => {
@@ -967,5 +979,29 @@ app.get('/getAllCertificates/:userId',async (req,res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 })
+
+// general file delete endpoint
+
+app.post('/deleteFiles', (req, res) => {
+    try {
+
+        if (fs.existsSync(`${staticPath}${req.body.url}`)) {
+
+            fs.unlinkSync(`${staticPath}${req.body.url}`);
+
+            res.status(200).send({
+                status: true, 
+                message: `file deleted successfully. please re-login to complete the operation`
+            });
+
+        } else {
+            res.status(200).send({ status: false, message: 'file does not exist.' });
+        }
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+
+});
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
