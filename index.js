@@ -63,7 +63,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -114,7 +114,6 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
 
 async function updatePaymentSideeffect(data){
     try {
-
         pool.get_connection(qb => {
             qb.update('tbl_payment_sideeffect', data, { id: data.id }, (err) => {
                 qb.release();
@@ -303,28 +302,28 @@ app.post('/createPaymentReference', async (req, res) => {
 
 });
 
-app.post('/paymentSuccessCallBack', async (req, res) => {
+app.post('/paymentSuccessCallBack', async (req, res) => {    
     try {
 
-        let response = req.body.data;
-    
-        let data = {
-            billReferenceNumber: response.billReferenceNumber,
-            id: response.metaData.paymentId,
+        let payload = {
+            id: req.body.metaData.metaData.paymentId,
+            billReferenceNumber: req.body.referenceNumber,
+            paymentMethod: req.body.paymentMethod,
+            status: req.body.status
         };
         
-        if (response.status == 'created') {
-            updatePaymentSideeffect(data);
-            res.status(200).send({ status: true, message: response });
+        if (req.body.status == 'PAYED') {
+            updatePaymentSideeffect(payload);
+            res.status(200).send({ status: true, message: req.body });
     
         } else {
-            let result = deletePaymentSideeffect(response.metaData.paymentId);
+            let result = deletePaymentSideeffect(req.body.metaData.metaData.paymentId);
 
             res.status(200).send({ 
                 status: result.status, 
                 message: 'unable to process the payment now. please try again later.' 
             });
-        }  
+        }
 
     } catch (err) {
         res.status(200).send({
@@ -406,7 +405,7 @@ app.post('/checkPaymnetSettlement', (req, res) => {
             qb.select('*')
                 .where('studentId', req.body.studentId)
                 .where('courseId', req.body.courseId)
-                .where('status', 'completed')
+                .where('status', 'PAYED')
 
                 .get('tbl_payment_sideeffect', (err, response) => {
                     qb.release();
