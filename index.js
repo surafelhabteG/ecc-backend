@@ -63,7 +63,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -564,11 +564,11 @@ app.get('/getAllEnrollmentRequest', (req, res) => {
     try {
         pool.get_connection(qb => {
             qb.select('*')
-                .get('tbl_enrollment_request', (err, response) => {
-                    qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                    res.send(response);
-                });
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
         });
 
     } catch(err){
@@ -585,7 +585,7 @@ app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
                 .get('tbl_enrollment_request', (err, response) => {
                     qb.release();
                     if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                    res.statue(200).send(response);
+                    res.status(200).send({ status: true, message: response });
                 });
         });
     
@@ -609,6 +609,23 @@ app.get('/deleteEnrollmentRequest/:id', (req, res) => {
     }
 });
 
+app.get('/getMyEnrollmentRequest/:institution_id', (req, res) => {
+    try {
+
+        pool.get_connection(qb => {
+            qb.select('*')
+            .where('institution_id', req.params.institution_id)
+                .get('tbl_enrollment_request', (err, response) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                    res.status(200).send({ status: true, message: response });
+                });
+        });
+    
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
 
 
 
