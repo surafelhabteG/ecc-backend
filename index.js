@@ -63,7 +63,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: '',
+    password: 'Abcd@5304',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -74,6 +74,17 @@ require('dotenv').config();
 const fs = require("fs")
 
 const requestPromise = require('request-promise');
+
+
+
+
+
+app.get('/', (req, res) => {
+    res.status(200).send('welcome to Ecc Express Api App');
+
+});
+
+
 
 // convert base64 string into actual file.
 async function convertBase64ToImage(data, fileName, directory = 'ids') {
@@ -90,17 +101,22 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
             const buffer = Buffer.from(data[1], "base64");
             let result = await base64.decode(buffer, { fname: `${url}${fileName}`, ext: 'jpeg' });
 
-            Jimp.read(`${url}${fileName}.jpeg`, async (err, image) => {
-                if (err) {
-                    return {
-                        status: false, message: err.message
-                    };
-                } else {
-                    Jimp.MIME_JPEG; // "image/jpeg"
-                    let result = await image.quality(40).write(`${url}${fileName}.jpeg`);
-                    return true;
-                }
-            });
+            if(result == 'file written successfully to disk'){
+
+                await Jimp.read(`${url}${fileName}.jpeg`, async (err, image) => {
+                    if (err) {
+                        return {
+                            status: false, message: err.message
+                        };
+                    } else {
+                        // Jimp.MIME_JPEG; // "image/jpeg"
+                        await image.quality(40).write(`${url}${fileName}.jpeg`);
+                        return {
+                            status: true, message: 'success'
+                        }
+                    }
+                });
+            }
         } catch(err) {
             return {
                 status: false, message: err.message
@@ -505,12 +521,15 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = convertBase64ToImage(req.body.traineelist, `requests/${req.body.id}`);
+        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult.status){
-            uploadresult = convertBase64ToImage(req.body.bankSlip,`requests/${req.body.id}`);
+            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
+        delete req.body.traineelist;
+        delete req.body.bankSlip;
+
         if(uploadresult.status){
             pool.get_connection(qb => {
                 qb.insert('tbl_enrollment_request', req.body, (err) => {
