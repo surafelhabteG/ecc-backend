@@ -103,18 +103,14 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
 
             if(result == 'file written successfully to disk'){
 
-                await Jimp.read(`${url}${fileName}.jpeg`, async (err, image) => {
-                    if (err) {
-                        return {
-                            status: false, message: err.message
-                        };
-                    } else {
-                        // Jimp.MIME_JPEG; // "image/jpeg"
-                        await image.quality(40).write(`${url}${fileName}.jpeg`);
-                        return {
-                            status: true, message: 'success'
-                        }
-                    }
+                Jimp.read(`${url}${fileName}.jpeg`)
+                .then(image => {
+                    return image.quality(40).write(`${url}${fileName}.jpeg`);
+                    
+                }).catch(err => {
+                    return {
+                        status: false, message: err.message
+                    };
                 });
             }
         } catch(err) {
@@ -523,14 +519,14 @@ app.post('/createEnrollmentRequest', async (req, res) => {
     
         let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
-        if(uploadresult.status){
+        if(uploadresult == undefined){
             uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
         delete req.body.traineelist;
         delete req.body.bankSlip;
 
-        if(uploadresult.status){
+        if(uploadresult == undefined){
             pool.get_connection(qb => {
                 qb.insert('tbl_enrollment_request', req.body, (err) => {
                     qb.release();
