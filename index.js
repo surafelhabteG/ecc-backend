@@ -30,15 +30,6 @@ const transporter = nodemailer.createTransport({
 });
 
 
-let userName = 'bisratdev@outlook.com'
-const transporter2 = nodemailer.createTransport({
-    service : 'hotmail',
-    auth : {
-        user : userName,
-        pass : 'Dever123'
-    }
-  });
-
 const redis = require('redis');
 
 const date = require('date-and-time');
@@ -74,9 +65,6 @@ require('dotenv').config();
 const fs = require("fs")
 
 const requestPromise = require('request-promise');
-
-
-
 
 
 app.get('/', (req, res) => {
@@ -122,6 +110,31 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
         return {
             status: false, message: 'Only image is allowed to upload. please try again.'
         }
+    }
+}
+
+async function deleteFiles(req, res, returnResult = false){
+    let message = {
+        status: true, 
+        message: `file deleted successfully. please re-login to complete the operation`
+    };
+
+    try {
+
+        if (fs.existsSync(`${staticPath}${req.body.url}`)) {
+
+            fs.unlinkSync(`${staticPath}${req.body.url}`);
+
+            if(returnResult) return message; res.status(200).send(message);
+
+        } else {
+            message.status = false; message.message = 'file does not exist.';
+            if(returnResult) return message; res.status(200).send(message);
+        }
+
+    } catch(err){
+        message.status = false; message.message = err.message;
+        if(returnResult) return message; res.status(200).send(message);
     }
 }
 
@@ -564,6 +577,7 @@ app.get('/getAllEnrollmentRequest', (req, res) => {
     try {
         pool.get_connection(qb => {
             qb.select('*')
+            .order_by('updatedAt','desc')
             .get('tbl_enrollment_request', (err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
@@ -594,13 +608,15 @@ app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
     }
 });
 
-app.get('/deleteEnrollmentRequest/:id', (req, res) => {
+app.post('/deleteEnrollmentRequest', (req, res) => {
     try {
         pool.get_connection(qb => {
-            qb.delete('tbl_enrollment_request',{ id: id }, (err) => {
+            qb.delete('tbl_enrollment_request',{ id: req.body.id }, (err) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err });
-                res.status(200).send({ status: true, message: 'data deleted successfully.' });
+
+                let result = deleteFiles(req, res, true);
+                res.status(200).send({ status: result.status, message: result.status ? 'data deleted successfully.' : result.message });
             });
         });
         
@@ -614,6 +630,7 @@ app.get('/getMyEnrollmentRequest/:institution_id', (req, res) => {
 
         pool.get_connection(qb => {
             qb.select('*')
+            .order_by('updatedAt','desc')
             .where('institution_id', req.params.institution_id)
                 .get('tbl_enrollment_request', (err, response) => {
                     qb.release();
@@ -852,35 +869,44 @@ app.get('/searchUser/:criteria', (req, res) => {
     });
 });
 
+async function logout(req, res){
+    const result = await redisClient.del(`auth/${req.params.access_token}`);
+
+    if(result){
+        res.send({ status: true, message: 'success' })
+
+    } else {
+        res.send({ status: false, message: 'unable to logout the user Redis. try again.' })
+    }
+}
+
 app.delete('/logout/:user_id/:access_token', async (req, res) => {
-    try {
+    if(req.params.user_id == 'admin'){
+        logout(req, res);
 
-        canvasAPI.terminateUserSession(req.params.user_id).then(async (response) => {
-            if (response == 'ok') {
-                const result = await redisClient.del(`auth/${req.params.access_token}`);
-
-                if(result){
-                    res.send({ status: true, message: 'success' })
-
+    } else {
+        try {
+    
+            canvasAPI.terminateUserSession(req.params.user_id).then(async (response) => {
+                if (response == 'ok') {
+                    logout(req, res);
+    
                 } else {
-                    res.send({ status: false, message: 'unable to logout the user Redis. try again.' })
+                    res.send({ status: false, message: 'unable to logout the user. try again.' })
                 }
-
-            } else {
-                res.send({ status: false, message: 'unable to logout the user. try again.' })
-            }
-        }).catch((errors) => {
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: errors.message
+                })
+            });
+    
+        } catch (err) {
             res.status(200).send({
                 status: false,
-                message: errors.message
+                message: err.message
             })
-        });
-
-    } catch (err) {
-        res.status(200).send({
-            status: false,
-            message: err
-        })
+        }
     }
 });
 
@@ -1015,25 +1041,7 @@ app.get('/getAllCertificates/:userId',async (req,res) => {
 // general file delete endpoint
 
 app.post('/deleteFiles', (req, res) => {
-    try {
-
-        if (fs.existsSync(`${staticPath}${req.body.url}`)) {
-
-            fs.unlinkSync(`${staticPath}${req.body.url}`);
-
-            res.status(200).send({
-                status: true, 
-                message: `file deleted successfully. please re-login to complete the operation`
-            });
-
-        } else {
-            res.status(200).send({ status: false, message: 'file does not exist.' });
-        }
-
-    } catch(err){
-        res.status(200).send({ status: false, message: err.message });
-    }
-
+    deleteFiles(req, res);
 });
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
