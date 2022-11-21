@@ -530,10 +530,10 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+        let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult == undefined){
-            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+            uploadresult = convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
         delete req.body.traineelist;
@@ -796,30 +796,41 @@ app.post('/login', async (req, res) => {
             status: false,
             message: err.message
         })
-    }
-
-
-
-
-   
+    }   
 });
 
 app.post('/updateProfile/:userId', (req, res) => {
     var url = `/users/${req.params.userId}/custom_data/profile?ns=extraInfo`;
     var message = "profile updated successfully. relogin to get updated data.";
+
     var custom_data = req.body.custom_data;
+    var user_data = req.body.user_data;
 
-    canvasAPI.storeCustomData(url, custom_data).then((response) => {
+
+    canvasAPI.updateUser(req.params.userId, user_data).then((response) => {
         if (response) {
-
-            var result = { status: true };
-
-            if (req.body.memberId !== null) {
-                result = convertBase64ToImage(req.body.memberId, req.params.userId);
-                !result.status ? message = `${message}, but unable to upload file.` : null;
-            }
-
-            res.status(200).send({ status: true, message: message });
+            canvasAPI.storeCustomData(url, custom_data).then((response) => {
+                if (response) {
+        
+                    var result = { status: true };
+        
+                    if (req.body.memberId !== null) {
+                        result = convertBase64ToImage(req.body.memberId, req.params.userId);
+                        !result.status ? message = `${message}, but unable to upload file.` : null;
+                    }
+        
+                    res.status(200).send({ status: true, message: message });
+        
+                } else {
+                    res.status(200).send({ status: false, message: 'fail to update the profile.' });
+                }
+        
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: errors.message
+                })
+            });
 
         } else {
             res.status(200).send({ status: false, message: 'fail to update the profile.' });
@@ -831,6 +842,7 @@ app.post('/updateProfile/:userId', (req, res) => {
             message: errors.message
         })
     });
+
 });
 
 app.post('/saveMyEducation/:userId', (req, res) => {
