@@ -566,7 +566,7 @@ app.post('/createEnrollmentRequest',  (req, res) => {
 
 app.post('/updateEnrollmentRequest', (req, res) => {
     try {
-        
+
         let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult == undefined){
@@ -580,13 +580,14 @@ app.post('/updateEnrollmentRequest', (req, res) => {
             pool.get_connection(qb => {
                 qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
                     qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err });
+                    if (err) return res.status(200).send({ status: false, message: err.message });
                     res.send({ status: true, message: 'request updated successfully.' });
                 });
             });
         }
 
     } catch(err){
+        console.log(err.message)
         res.status(200).send({ status: false, message: err.message });
     }
 });
