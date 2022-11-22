@@ -625,7 +625,7 @@ app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
     }
 });
 
-app.post('/deleteEnrollmentRequest', (req, res) => {
+app.post('/deleteEnrollmentRequest/:id', (req, res) => {
     
     try {
 
