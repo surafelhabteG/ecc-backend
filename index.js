@@ -121,7 +121,7 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
 async function deleteFiles(req, res, returnResult = false){
     let message = {
         status: true, 
-        message: `file deleted successfully. please re-login to complete the operation`
+        message: `file deleted successfully.`
     };
 
     try {
@@ -530,15 +530,15 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
 });
 
 // enrollment request
-app.post('/createEnrollmentRequest',  (req, res) => {
+app.post('/createEnrollmentRequest', async (req, res) => {
     try {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult == undefined){
-            uploadresult = convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
         delete req.body.traineelist;
@@ -558,7 +558,6 @@ app.post('/createEnrollmentRequest',  (req, res) => {
         }
         
     } catch(err){
-        console.log(err)
         res.status(200).send({ status: false, message: err.message });
     }
 
@@ -587,7 +586,6 @@ app.post('/updateEnrollmentRequest', async (req, res) => {
         }
 
     } catch(err){
-        console.log(err.message)
         res.status(200).send({ status: false, message: err.message });
     }
 });
@@ -628,16 +626,22 @@ app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
 });
 
 app.post('/deleteEnrollmentRequest', (req, res) => {
+    
     try {
-        pool.get_connection(qb => {
-            qb.delete('tbl_enrollment_request',{ id: req.body.id }, (err) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err });
 
-                let result = deleteFiles(req, res, true);
-                res.status(200).send({ status: result.status, message: result.status ? 'data deleted successfully.' : result.message });
+        let result = deleteFiles(req, res, true);
+    
+        if(result?.status){
+            pool.get_connection(qb => {
+                qb.delete('tbl_enrollment_request',{ id: req.body.id }, (err) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err });
+    
+                    let result = deleteFiles(req, res, true);
+                    res.status(200).send({ status: result.status, message: result.status ? 'data deleted successfully.' : result.message });
+                });
             });
-        });
+        }
         
     } catch(err){
         res.status(200).send({ status: false, message: err.message });
