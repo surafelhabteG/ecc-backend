@@ -566,14 +566,26 @@ app.post('/createEnrollmentRequest',  (req, res) => {
 
 app.post('/updateEnrollmentRequest', (req, res) => {
     try {
-        pool.get_connection(qb => {
-            qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err });
-                res.send({ status: true, message: 'request updated successfully.' });
-            });
-        });
         
+        let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+    
+        if(uploadresult == undefined){
+            uploadresult = convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+        }
+    
+        delete req.body.traineelist;
+        delete req.body.bankSlip;
+
+        if(uploadresult == undefined){
+            pool.get_connection(qb => {
+                qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err });
+                    res.send({ status: true, message: 'request updated successfully.' });
+                });
+            });
+        }
+
     } catch(err){
         res.status(200).send({ status: false, message: err.message });
     }
