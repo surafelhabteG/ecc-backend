@@ -530,10 +530,10 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult == undefined){
-            uploadresult = convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
         delete req.body.traineelist;
