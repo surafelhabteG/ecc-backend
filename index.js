@@ -76,11 +76,13 @@ app.get('/', (req, res) => {
 
 // convert base64 string into actual file.
 async function convertBase64ToImage(data, fileName, directory = 'ids') {
-    var url = `${staticPath}/uploads/${directory}/`;
-    data = data.split("base64,");
+    
+    try {
 
-    if (data[0].includes('data:image')) {
-        try {
+        var url = `${staticPath}/uploads/${directory}/`;
+        data = data.split("base64,");
+
+        if (data[0].includes('data:image')) {
 
             if (!fs.existsSync(url)) {
                 fs.mkdirSync(url, { recursive: true });   
@@ -101,14 +103,17 @@ async function convertBase64ToImage(data, fileName, directory = 'ids') {
                     };
                 });
             }
-        } catch(err) {
+
+        } else {
             return {
-                status: false, message: err.message
+                status: false, message: 'Only image is allowed to upload. please try again.'
             }
         }
-    } else {
+
+    } catch(err) {
+        console.log(err.message)
         return {
-            status: false, message: 'Only image is allowed to upload. please try again.'
+            status: false, message: err.message
         }
     }
 }
@@ -525,15 +530,15 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
 });
 
 // enrollment request
-app.post('/createEnrollmentRequest', (req, res) => {
+app.post('/createEnrollmentRequest', async (req, res) => {
     try {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult == undefined){
-            uploadresult = convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
         delete req.body.traineelist;
