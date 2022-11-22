@@ -525,15 +525,15 @@ app.get('/getUserEnrollment/:userId', (req, res) => {
 });
 
 // enrollment request
-app.post('/createEnrollmentRequest', async (req, res) => {
+app.post('/createEnrollmentRequest', (req, res) => {
     try {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+        let uploadresult = convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
     
         if(uploadresult == undefined){
-            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+            uploadresult = convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
         }
     
         delete req.body.traineelist;
@@ -553,6 +553,7 @@ app.post('/createEnrollmentRequest', async (req, res) => {
         }
         
     } catch(err){
+        console.log(err)
         res.status(200).send({ status: false, message: err.message });
     }
 
