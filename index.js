@@ -54,7 +54,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -75,71 +75,117 @@ app.get('/', (req, res) => {
 
 
 // convert base64 string into actual file.
-async function convertBase64ToImage(data, fileName, directory = 'ids') {
-    
+async function convertBase64ToImage(data, fileName, directory = 'ids',isImage = true) {
     try {
 
         var url = `${staticPath}/uploads/${directory}/`;
         data = data.split("base64,");
 
-        if (data[0].includes('data:image')) {
+        // if (data[0].includes('data:image')) {
 
             if (!fs.existsSync(url)) {
                 fs.mkdirSync(url, { recursive: true });   
             } 
 
             const buffer = Buffer.from(data[1], "base64");
-            let result = await base64.decode(buffer, { fname: `${url}${fileName}`, ext: 'jpeg' });
+            let result = await base64.decode(buffer, { fname: `${url}${fileName}`, ext: isImage ? 'jpeg' : 'pdf' });
 
             if(result == 'file written successfully to disk'){
-
-                Jimp.read(`${url}${fileName}.jpeg`)
-                .then(image => {
-                    return image.quality(40).write(`${url}${fileName}.jpeg`);
-                    
-                }).catch(err => {
+                if(isImage){
+                    Jimp.read(`${url}${fileName}.jpeg`)
+                    .then(image => {
+                        return image.quality(40).write(`${url}${fileName}.jpeg`);
+                        
+                    }).catch(err => {
+                        return {
+                            status: false, message: err.message
+                        };
+                    });
+                } else {
                     return {
-                        status: false, message: err.message
+                        status: true, message: 'successfully upload file.'
                     };
-                });
+                }
+                
+            } else {
+                return {
+                    status: false, message: 'unable to upload file.'
+                };
             }
 
-        } else {
-            return {
-                status: false, message: 'Only image is allowed to upload. please try again.'
-            }
-        }
+        // } else {
+        //     return {
+        //         status: false, message: 'Only image is allowed to upload. please try again.'
+        //     }
+        // }
 
     } catch(err) {
-        console.log(err.message)
         return {
             status: false, message: err.message
         }
     }
 }
 
-async function deleteFiles(req, res, returnResult = false){
-    let message = {
-        status: true, 
-        message: `file deleted successfully.`
-    };
-
+function deleteFiles(req, res, returnResult = false, isDirectory = false){
     try {
 
-        if (fs.existsSync(`${staticPath}${req.body.url}`)) {
+        if (fs.existsSync(`${staticPath}/${req.body.url}`)) {
 
-            fs.unlinkSync(`${staticPath}${req.body.url}`);
+            if(isDirectory){
+                fs.rmdirSync(`${staticPath}/${req.body.url}`,{recursive: true});
 
-            if(returnResult) return message; res.status(200).send(message);
+            } else {
+                fs.unlinkSync(`${staticPath}/${req.body.url}`);
+
+            }
+
+            if(returnResult) {
+                return {
+                    status: true, 
+                    message: `file deleted successfully.`
+                };
+
+            } else {
+                res.status(200).send(
+                    {
+                        status: true, 
+                        message: `file deleted successfully.`
+                    }
+                );
+            }     
 
         } else {
-            message.status = false; message.message = 'file does not exist.';
-            if(returnResult) return message; res.status(200).send(message);
+            if(returnResult) {
+                return {
+                    status: true, 
+                    message: `file does not exist.`
+                };
+
+            } else {
+                res.status(200).send(
+                    {
+                        status: false, 
+                        message: `file does not exist.`
+                    }
+                );
+            }
         }
 
     } catch(err){
-        message.status = false; message.message = err.message;
-        if(returnResult) return message; res.status(200).send(message);
+        if(returnResult) {
+            return {
+                status: true, 
+                message: err.message
+            };
+
+        } else {
+            res.status(200).send(
+                {
+                    status: false, 
+                    message: err.message
+                }
+            );
+        }
     }
 }
 
@@ -535,10 +581,10 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
+        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
     
         if(uploadresult == undefined){
-            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
         }
     
         delete req.body.traineelist;
@@ -565,11 +611,16 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
 app.post('/updateEnrollmentRequest', async (req, res) => {
     try {
+        let uploadresult;
 
-        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`);
-    
-        if(uploadresult == undefined){
-            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`);
+        if(req.body.traineelist){
+            uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+        }
+
+        if(req.body.bankSlip){
+            if(uploadresult == undefined){
+                uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+            }
         }
     
         delete req.body.traineelist;
@@ -629,7 +680,7 @@ app.post('/deleteEnrollmentRequest/:id', (req, res) => {
     
     try {
 
-        let result = deleteFiles(req, res, true);
+        let result = deleteFiles(req, res, true, true);
     
         if(result?.status){
             pool.get_connection(qb => {
@@ -637,7 +688,6 @@ app.post('/deleteEnrollmentRequest/:id', (req, res) => {
                     qb.release();
                     if (err) return res.status(200).send({ status: false, message: err });
     
-                    let result = deleteFiles(req, res, true);
                     res.status(200).send({ status: result.status, message: result.status ? 'data deleted successfully.' : result.message });
                 });
             });
