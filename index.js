@@ -611,7 +611,7 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
 app.post('/updateEnrollmentRequest', async (req, res) => {
     try {
-        
+
         let uploadresult;
 
         if(req.body.traineelist){
@@ -638,6 +638,7 @@ app.post('/updateEnrollmentRequest', async (req, res) => {
         }
 
     } catch(err){
+        console.log(err.message)
         res.status(200).send({ status: false, message: err.message });
     }
 });
