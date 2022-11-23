@@ -75,7 +75,7 @@ app.get('/', (req, res) => {
 
 
 // convert base64 string into actual file.
-async function convertBase64ToImage(data, fileName, directory = 'ids',isImage = true) {
+async function convertBase64(data, fileName, directory = 'ids',isImage = true) {
     try {
 
         var url = `${staticPath}/uploads/${directory}/`;
@@ -581,16 +581,16 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+        let uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
     
-        if(uploadresult == undefined){
-            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+        if(uploadresult !== undefined){
+            uploadresult = await convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
         }
     
         delete req.body.traineelist;
         delete req.body.bankSlip;
 
-        if(uploadresult == undefined){
+        if(uploadresult !== undefined){
             pool.get_connection(qb => {
                 qb.insert('tbl_enrollment_request', req.body, (err) => {
                     qb.release();
@@ -611,22 +611,23 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
 app.post('/updateEnrollmentRequest', async (req, res) => {
     try {
+        
         let uploadresult;
 
         if(req.body.traineelist){
-            uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+            uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
         }
 
         if(req.body.bankSlip){
-            if(uploadresult == undefined){
-                uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+            if(uploadresult !== undefined){
+                uploadresult = await convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
             }
         }
     
         delete req.body.traineelist;
         delete req.body.bankSlip;
 
-        if(uploadresult == undefined){
+        if(uploadresult !== undefined){
             pool.get_connection(qb => {
                 qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
                     qb.release();
@@ -769,7 +770,7 @@ app.post('/register', async (req, res) => {
                             var result = { status: true };
 
                             if (memberId) {
-                                result = convertBase64ToImage(memberId, id);
+                                result = convertBase64(memberId, id);
                                 !result.status ? message = 'register successfully, but unable to upload file.' : null;
                             }
 
@@ -888,7 +889,7 @@ app.post('/updateProfile/:userId', (req, res) => {
                     var result = { status: true };
         
                     if (req.body.memberId !== null) {
-                        result = convertBase64ToImage(req.body.memberId, req.params.userId);
+                        result = convertBase64(req.body.memberId, req.params.userId);
                         !result.status ? message = `${message}, but unable to upload file.` : null;
                     }
         
