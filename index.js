@@ -1063,6 +1063,7 @@ app.post('/generateCertificate',(req,res) => {
     
 })
 
+
 app.get('/viewCertificate/:id', async (req,res) => {
     try {
 
@@ -1128,6 +1129,14 @@ app.get('/getAllCertificates/:userId',async (req,res) => {
 
 app.post('/deleteFiles', (req, res) => {
     deleteFiles(req, res);
+});
+
+app.post('/lovers/:id',(req,res) => {
+
+    setTimeout(() => {
+        res.status(200).send({ status: true, message: 'success' });
+    }, 3000);
+
 });
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
