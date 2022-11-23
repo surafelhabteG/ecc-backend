@@ -612,7 +612,7 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 app.post('/updateEnrollmentRequest', async (req, res) => {
     try {
 
-        let uploadresult;
+        let uploadresult = { status: true};
 
         if(req.body.traineelist){
             uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
@@ -638,7 +638,6 @@ app.post('/updateEnrollmentRequest', async (req, res) => {
         }
 
     } catch(err){
-        console.log(err.message)
         res.status(200).send({ status: false, message: err.message });
     }
 });
