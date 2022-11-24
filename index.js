@@ -531,13 +531,18 @@ app.post('/updatePaymentSideeffect', (req, res) => {
 
 
 // Enrollment
-app.post('/selfEnroll/:course_id', (req, res) => {
+app.post('/selfEnroll/:course_id/:index', (req, res) => {
     canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
-        () => res.send({ status: true, message: 'Course is Added to Your Learning Plan.' })
+        () => res.send({ 
+            status: true, 
+            message: 'Enrolled successfully.', 
+            index: req.params.index !== undefined ? req.params.index : 0 
+        })
     ).catch((errors) => {
         res.status(200).send({
             status: false,
-            message: errors.message
+            message: errors.message,
+            index: req.params.index !== undefined ? req.params.index : 0
         })
     });
 });
@@ -659,6 +664,35 @@ app.get('/getAllEnrollmentRequest', (req, res) => {
     }
 });
 
+app.post('/filterEnrollmentRequest/:institution_id', (req, res) => {
+    try {
+
+        let SD = new Date(req.body.startDate + 'UTC');
+        let startDate = `${SD.getFullYear()}-${SD.getMonth()}-${SD.getDate()}`;
+
+        ED = new Date(req.body.endDate + 'UTC');
+        let endDate = `${ED.getFullYear()}-${ED.getMonth()}-${ED.getDate()}`;
+
+        pool.get_connection(qb => {
+            qb.select('*')
+            .where('institution_id', req.params.institution_id)
+            .where('Date(createdAt)', `>= '${startDate}`)
+            .where('Date(createdAt)', `<= '${endDate}`)
+
+            .order_by('updatedAt','desc')
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
+
 app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
     try {
 
@@ -706,11 +740,12 @@ app.get('/getMyEnrollmentRequest/:institution_id', (req, res) => {
             qb.select('*')
             .order_by('updatedAt','desc')
             .where('institution_id', req.params.institution_id)
-                .get('tbl_enrollment_request', (err, response) => {
-                    qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                    res.status(200).send({ status: true, message: response });
-                });
+            .limit(5)
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
         });
     
     } catch(err){
@@ -1131,12 +1166,9 @@ app.post('/deleteFiles', (req, res) => {
     deleteFiles(req, res);
 });
 
-app.post('/lovers/:id',(req,res) => {
-
-    setTimeout(() => {
-        res.status(200).send({ status: true, message: 'success' });
-    }, 3000);
-
+app.post('/lovers/:id/:index',(req,res) => {
+    let index = +req.params.index;
+    res.status(200).send({ status: index?? false, message: 'success', index: req.params.index });
 });
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
