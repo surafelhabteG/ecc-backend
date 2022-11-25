@@ -869,15 +869,28 @@ app.post('/login', async (req, res) => {
 
                         }
 
-                        await redisClient.set(`auth/${data.access_token}`, JSON.stringify(data), {
-                            EX: 300,
-                            NX: true,
-                          });
+                        // call to get user login id
+                        canvasAPI.getUserLogin(response.id).then(async (loginDetail) => {
+                            data.login_id = loginDetail[0].id;
+                            data.account_id = loginDetail[0].account_id;
 
-                        res.status(200).send({
-                            status: true,
-                            message: data
+                            await redisClient.set(`auth/${data.access_token}`, JSON.stringify(data), {
+                                EX: 300,
+                                NX: true,
+                              });
+    
+                            res.status(200).send({
+                                status: true,
+                                message: data
+                            });
+
+                        }).catch((err) => {
+                            res.status(200).send({
+                                status: false,
+                                message: err.message
+                            })
                         });
+
     
                     }).catch((err) => {
                         res.status(200).send({
@@ -951,7 +964,98 @@ app.post('/updateProfile/:userId', (req, res) => {
             message: errors.message
         })
     });
+});
 
+
+app.post('/changePassword/:accountId/:loginId', (req, res) => {
+    canvasAPI.changepassword(req.params.accountId, req.params.loginId, req.body).then((response) => {
+        if (response) {
+            res.status(200).send({ status: true, message: 'password changed successfully' });
+
+        } else {
+            res.status(200).send({ status: false, message: 'fail to change password.' });
+        }
+    }).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
+
+app.post('/resetPassword', (req, res) => {
+    canvasAPI.searchUser(`sis_login_id:${req.body.email}`).then((response) => {
+
+        if ('login_id' in response) {
+
+            // call email sender for email reset
+            let message = `
+                Hi ${response.name}, You recently requested to reset the password for your account. 
+                Click the button below link to proceed. 
+                ${req.body.link }/${response.id}
+                If you did not request a password reset, 
+                please ignore this email or reply to let us know.
+            `;
+
+            const mailData = {
+                from: 'surafel@360ground.com',
+                to: req.body.email,
+                subject: `Password reset`,
+                text: message,
+            };
+
+            try {
+
+                transporter.sendMail(mailData, function (err, info) {
+                    if(err){
+                        res.status(200).send(
+                            { 
+                                status: false, message: err.message 
+                            }
+                        );
+                    } else {
+                        res.status(200).send(
+                            { 
+                                status: true, message: `Password reset link is send to your email address.` 
+                            }
+                        );
+                    }   
+                });
+
+            } catch(error){
+                res.status(200).send(
+                    { 
+                        status: false, message: error.message 
+                    }
+                );
+            }
+        }
+
+    }).catch((errors) => {
+        res.status(200).send(
+            { 
+                status: false, message: `User not found by email address : ${req.body.email}` 
+            }
+        );
+
+    })
+});
+
+
+app.get('/getUserLogin/:userId', (req, res) => {
+    canvasAPI.getUserLogin(req.params.userId).then((response) => {
+        res.status(200).send({
+            status: response.length ? true : false,
+            message: response.length ? response[0] : response
+        });
+
+    }).catch((err) => {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    });
 });
 
 app.post('/saveMyEducation/:userId', (req, res) => {
