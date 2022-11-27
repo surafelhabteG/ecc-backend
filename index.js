@@ -2,7 +2,6 @@ const app = require('express')();
 const express = require('express');
 const morgan = require('morgan');
 const { uuid } = require('uuidv4');
-const axios = require("axios").create({baseUrl: ""});
 
 const Jimp = require("jimp");
 const base64 = require('node-base64-image');
