@@ -53,7 +53,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: '',
+    password: 'Abcd@5304',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -74,7 +74,7 @@ app.get('/', (req, res) => {
 
 
 // convert base64 string into actual file.
-async function convertBase64ToImage(data, fileName, directory = 'ids',isImage = true) {
+async function convertBase64(data, fileName, directory = 'ids',isImage = true) {
     try {
 
         var url = `${staticPath}/uploads/${directory}/`;
@@ -530,13 +530,18 @@ app.post('/updatePaymentSideeffect', (req, res) => {
 
 
 // Enrollment
-app.post('/selfEnroll/:course_id', (req, res) => {
+app.post('/selfEnroll/:course_id/:index', (req, res) => {
     canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
-        () => res.send({ status: true, message: 'Course is Added to Your Learning Plan.' })
+        () => res.send({ 
+            status: true, 
+            message: 'Enrolled successfully.', 
+            index: req.params.index !== undefined ? req.params.index : 0 
+        })
     ).catch((errors) => {
         res.status(200).send({
             status: false,
-            message: errors.message
+            message: errors.message,
+            index: req.params.index !== undefined ? req.params.index : 0
         })
     });
 });
@@ -580,16 +585,16 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+        let uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
     
-        if(uploadresult == undefined){
-            uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+        if(uploadresult !== undefined){
+            uploadresult = await convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
         }
     
         delete req.body.traineelist;
         delete req.body.bankSlip;
 
-        if(uploadresult == undefined){
+        if(uploadresult !== undefined){
             pool.get_connection(qb => {
                 qb.insert('tbl_enrollment_request', req.body, (err) => {
                     qb.release();
@@ -610,22 +615,23 @@ app.post('/createEnrollmentRequest', async (req, res) => {
 
 app.post('/updateEnrollmentRequest', async (req, res) => {
     try {
-        let uploadresult;
+
+        let uploadresult = { status: true};
 
         if(req.body.traineelist){
-            uploadresult = await convertBase64ToImage(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+            uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
         }
 
         if(req.body.bankSlip){
-            if(uploadresult == undefined){
-                uploadresult = await convertBase64ToImage(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+            if(uploadresult !== undefined){
+                uploadresult = await convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
             }
         }
     
         delete req.body.traineelist;
         delete req.body.bankSlip;
 
-        if(uploadresult == undefined){
+        if(uploadresult !== undefined){
             pool.get_connection(qb => {
                 qb.update('tbl_enrollment_request', req.body, { id: req.body.id }, (err) => {
                     qb.release();
@@ -656,6 +662,35 @@ app.get('/getAllEnrollmentRequest', (req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+app.post('/filterEnrollmentRequest/:institution_id', (req, res) => {
+    try {
+
+        let SD = new Date(req.body.startDate + 'UTC');
+        let startDate = `${SD.getFullYear()}-${SD.getMonth()}-${SD.getDate()}`;
+
+        ED = new Date(req.body.endDate + 'UTC');
+        let endDate = `${ED.getFullYear()}-${ED.getMonth()}-${ED.getDate()}`;
+
+        pool.get_connection(qb => {
+            qb.select('*')
+            .where('institution_id', req.params.institution_id)
+            .where('Date(createdAt)', `>= '${startDate}`)
+            .where('Date(createdAt)', `<= '${endDate}`)
+
+            .order_by('updatedAt','desc')
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
 
 app.get('/getDetailEnrollmentRequest/:id', (req, res) => {
     try {
@@ -704,11 +739,12 @@ app.get('/getMyEnrollmentRequest/:institution_id', (req, res) => {
             qb.select('*')
             .order_by('updatedAt','desc')
             .where('institution_id', req.params.institution_id)
-                .get('tbl_enrollment_request', (err, response) => {
-                    qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                    res.status(200).send({ status: true, message: response });
-                });
+            .limit(5)
+            .get('tbl_enrollment_request', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
         });
     
     } catch(err){
@@ -768,7 +804,7 @@ app.post('/register', async (req, res) => {
                             var result = { status: true };
 
                             if (memberId) {
-                                result = convertBase64ToImage(memberId, id);
+                                result = convertBase64(memberId, id);
                                 !result.status ? message = 'register successfully, but unable to upload file.' : null;
                             }
 
@@ -832,15 +868,28 @@ app.post('/login', async (req, res) => {
 
                         }
 
-                        await redisClient.set(`auth/${data.access_token}`, JSON.stringify(data), {
-                            EX: 300,
-                            NX: true,
-                          });
+                        // call to get user login id
+                        canvasAPI.getUserLogin(response.id).then(async (loginDetail) => {
+                            data.login_id = loginDetail[0].id;
+                            data.account_id = loginDetail[0].account_id;
 
-                        res.status(200).send({
-                            status: true,
-                            message: data
+                            await redisClient.set(`auth/${data.access_token}`, JSON.stringify(data), {
+                                EX: 300,
+                                NX: true,
+                              });
+    
+                            res.status(200).send({
+                                status: true,
+                                message: data
+                            });
+
+                        }).catch((err) => {
+                            res.status(200).send({
+                                status: false,
+                                message: err.message
+                            })
                         });
+
     
                     }).catch((err) => {
                         res.status(200).send({
@@ -887,7 +936,7 @@ app.post('/updateProfile/:userId', (req, res) => {
                     var result = { status: true };
         
                     if (req.body.memberId !== null) {
-                        result = convertBase64ToImage(req.body.memberId, req.params.userId);
+                        result = convertBase64(req.body.memberId, req.params.userId);
                         !result.status ? message = `${message}, but unable to upload file.` : null;
                     }
         
@@ -914,7 +963,98 @@ app.post('/updateProfile/:userId', (req, res) => {
             message: errors.message
         })
     });
+});
 
+
+app.post('/changePassword/:accountId/:loginId', (req, res) => {
+    canvasAPI.changepassword(req.params.accountId, req.params.loginId, req.body).then((response) => {
+        if (response) {
+            res.status(200).send({ status: true, message: 'password changed successfully' });
+
+        } else {
+            res.status(200).send({ status: false, message: 'fail to change password.' });
+        }
+    }).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
+
+app.post('/resetPassword', (req, res) => {
+    canvasAPI.searchUser(`sis_login_id:${req.body.email}`).then((response) => {
+
+        if ('login_id' in response) {
+
+            // call email sender for email reset
+            let message = `
+                Hi ${response.name}, You recently requested to reset the password for your account. 
+                Click the button below link to proceed. 
+                ${req.body.link }/${response.id}
+                If you did not request a password reset, 
+                please ignore this email or reply to let us know.
+            `;
+
+            const mailData = {
+                from: 'surafel@360ground.com',
+                to: req.body.email,
+                subject: `Password reset`,
+                text: message,
+            };
+
+            try {
+
+                transporter.sendMail(mailData, function (err, info) {
+                    if(err){
+                        res.status(200).send(
+                            { 
+                                status: false, message: err.message 
+                            }
+                        );
+                    } else {
+                        res.status(200).send(
+                            { 
+                                status: true, message: `Password reset link is send to your email address.` 
+                            }
+                        );
+                    }   
+                });
+
+            } catch(error){
+                res.status(200).send(
+                    { 
+                        status: false, message: error.message 
+                    }
+                );
+            }
+        }
+
+    }).catch((errors) => {
+        res.status(200).send(
+            { 
+                status: false, message: `User not found by email address : ${req.body.email}` 
+            }
+        );
+
+    })
+});
+
+
+app.get('/getUserLogin/:userId', (req, res) => {
+    canvasAPI.getUserLogin(req.params.userId).then((response) => {
+        res.status(200).send({
+            status: response.length ? true : false,
+            message: response.length ? response[0] : response
+        });
+
+    }).catch((err) => {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    });
 });
 
 app.post('/saveMyEducation/:userId', (req, res) => {
@@ -1061,6 +1201,7 @@ app.post('/generateCertificate',(req,res) => {
     
 })
 
+
 app.get('/viewCertificate/:id', async (req,res) => {
     try {
 
@@ -1126,6 +1267,11 @@ app.get('/getAllCertificates/:userId',async (req,res) => {
 
 app.post('/deleteFiles', (req, res) => {
     deleteFiles(req, res);
+});
+
+app.post('/lovers/:id/:index',(req,res) => {
+    let index = +req.params.index;
+    res.status(200).send({ status: index?? false, message: 'success', index: req.params.index });
 });
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
