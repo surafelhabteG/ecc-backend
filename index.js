@@ -53,7 +53,7 @@ app.use(cors({ origin: '*' }));
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 const canvasAPI = require('node-canvas-api')
@@ -992,7 +992,7 @@ app.post('/resetPassword', (req, res) => {
             let message = `
                 Hi ${response.name}, You recently requested to reset the password for your account. 
                 Click the button below link to proceed. 
-                ${req.body.link }/${response.id}
+                ${req.body.link }?user_id=${response.id}
                 If you did not request a password reset, 
                 please ignore this email or reply to let us know.
             `;
