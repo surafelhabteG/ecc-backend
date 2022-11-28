@@ -1,9 +1,12 @@
 const fs = require("fs")
 const Jimp = require("jimp");
 const base64 = require('node-base64-image');
+const path = require('path')
+
+const staticPath = path.join(process.cwd(),'public')
 
 // convert base64 string into actual file.
-async function convertBase64(data, fileName, directory = 'ids',isImage = true) {
+const convertBase64 = async (data, fileName, directory = 'ids',isImage = true) => {
     try {
 
         var url = `${staticPath}/uploads/${directory}/`;
@@ -54,7 +57,7 @@ async function convertBase64(data, fileName, directory = 'ids',isImage = true) {
     }
 }
 
-function deleteFiles(req, res, isDirectory = false){
+const deleteFiles = (req, res, isDirectory = false) => {
     try {
 
         if (fs.existsSync(`${staticPath}/${req.body.url}`)) {
@@ -78,5 +81,7 @@ function deleteFiles(req, res, isDirectory = false){
     }
 }
 
-module.exports = convertBase64;
-module.exports = deleteFiles;
+module.exports = {
+    convertBase64,
+    deleteFiles
+};

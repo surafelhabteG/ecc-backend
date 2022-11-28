@@ -1,6 +1,6 @@
 const express = require('express');
 
-const convertBase64 = require('../helpers/Files');
+const { convertBase64 } = require('../helpers/Files');
 const redisClient = require('../helpers/Db');
 const transporter = require('../helpers/Mailer');
 
@@ -9,7 +9,7 @@ const canvasAPI = require('node-canvas-api');
 const fs = require("fs");
 const path = require('path')
 
-const staticPath = path.join(__dirname,'public')
+const staticPath = path.join(process.cwd(),'public')
 
 // User Authntication and other
 router.post('/isLoggedIn', async (req, res) => {
@@ -266,7 +266,8 @@ router.post('/resetPassword', async(req, res) => {
                         res.status(200).send({ status: false, message: err.message});
             
                     } else {
-                        res.status(200).send({ status: true, message: 'success'});
+                        res.status(200).send({ status: true, 
+                            message: 'Password reset link sent to your email successfully. check and proceed'});
                     }   
                 });
 

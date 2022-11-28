@@ -1,14 +1,37 @@
 const express = require('express');
 
-const send = require('../helpers/Mailer');
+const transporter = require('../helpers/Mailer');
 const router = express.Router();
-const deleteFiles = require('../helpers/Files');
+const { deleteFiles } = require('../helpers/Files');
 
 router.post('/contactUs', async (req, res) => {
-    let subject = `contactus message from ${req.body.fullName}, phone number : ${req.body.phoneNumber}`;
-    let result = await send('surafel@360ground.com',subject,req.body.message);
-   
-    res.status(200).send(result);
+
+    try {
+
+        const mailData = {
+            from: req.body.email,
+            to: 'surafel@360ground.com',
+            subject: `contactus message from ${req.body.fullName}, phone number : ${req.body.phoneNumber}`,
+            text: req.body.message,
+        };
+    
+        transporter.sendMail(mailData, function (err, info) {
+            if(err){
+                res.status(200).send({ status: false, message: err.message});
+    
+            } else {
+                res.status(200).send({ status: true, 
+                    message: 'Thank you for your contact Us. we will reach you as soon as we can.'});
+            }   
+        });
+
+    } catch(error){
+        res.status(200).send(
+            { 
+                status: false, message: error.message 
+            }
+        );
+    }
 });
 
 

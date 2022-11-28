@@ -1,8 +1,7 @@
 const express = require('express');
 
 // const connection = require('../helpers/Db');
-const convertBase64 = require('../helpers/Files');
-const deleteFiles = require('../helpers/Files');
+const { convertBase64, deleteFiles } = require('../helpers/Files');
 
 const router = express.Router();
 const { uuid } = require('uuidv4');
@@ -14,7 +13,7 @@ const QueryBuilder = require('node-querybuilder');
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: '',
+    password: 'Abcd@5304',
     database: 'ecc'
 };
 
@@ -71,15 +70,15 @@ router.get('/getUserEnrollment/:userId', (req, res) => {
 });
 
 // enrollment request
-router.post('/createEnrollmentRequest', async (req, res) => {
+router.post('/createEnrollmentRequest', (req, res) => {
     try {
 
         req.body.id = uuid().replace('-', '');
     
-        let uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+        let uploadresult = convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
     
         if(uploadresult !== undefined){
-            uploadresult = await convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+            uploadresult = convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
         }
     
         delete req.body.traineelist;
@@ -104,18 +103,18 @@ router.post('/createEnrollmentRequest', async (req, res) => {
 
 });
 
-router.post('/updateEnrollmentRequest', async (req, res) => {
+router.post('/updateEnrollmentRequest', (req, res) => {
     try {
 
         let uploadresult = { status: true};
 
         if(req.body.traineelist){
-            uploadresult = await convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
+            uploadresult = convertBase64(req.body.traineelist, 'traineelist',`requests/${req.body.id}`, false);
         }
 
         if(req.body.bankSlip){
             if(uploadresult !== undefined){
-                uploadresult = await convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
+                uploadresult = convertBase64(req.body.bankSlip, 'bankSlip', `requests/${req.body.id}`, false);
             }
         }
     
@@ -201,11 +200,11 @@ router.get('/getDetailEnrollmentRequest/:id', (req, res) => {
     }
 });
 
-router.post('/deleteEnrollmentRequest/:id', async (req, res) => {
+router.post('/deleteEnrollmentRequest/:id', (req, res) => {
     
     try {
 
-        let result = await deleteFiles(req, res, true);
+        let result = deleteFiles(req, res, true);
     
         if(result?.status){
             pool.get_connection(qb => {
