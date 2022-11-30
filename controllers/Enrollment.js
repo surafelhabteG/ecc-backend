@@ -20,18 +20,18 @@ const connection = {
 const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
 // Enrollment
-router.post('/selfEnroll/:course_id/:index', (req, res) => {
+router.post('/selfEnroll/:course_id', (req, res) => {
     canvasAPI.createUserCourseEnrollment(req.params.course_id, req.body).then(
         () => res.send({ 
             status: true, 
             message: 'Enrolled successfully.', 
-            index: req.params.index !== undefined ? req.params.index : 0 
+            index: req.body.index !== undefined ? req.body.index : 0 
         })
     ).catch((errors) => {
         res.status(200).send({
             status: false,
             message: errors.message,
-            index: req.params.index !== undefined ? req.params.index : 0
+            index: req.body.index !== undefined ? req.body.index : 0
         })
     });
 });
@@ -155,21 +155,12 @@ router.get('/getAllEnrollmentRequest', (req, res) => {
 
 router.post('/filterEnrollmentRequest/:institution_id', (req, res) => {
     try {
-
-        let SD = new Date(req.body.startDate + 'UTC');
-        let startDate = `${SD.getFullYear()}-${SD.getMonth()}-${SD.getDate()}`;
-
-        ED = new Date(req.body.endDate + 'UTC');
-        let endDate = `${ED.getFullYear()}-${ED.getMonth()}-${ED.getDate()}`;
-
         pool.get_connection(qb => {
             qb.select('*')
-            .where('institution_id', req.params.institution_id)
-            .where('Date(createdAt)', `>= '${startDate}`)
-            .where('Date(createdAt)', `<= '${endDate}`)
-
+            .from('tbl_enrollment_request')
+            .where(`createdAt >= ${req.body.startDate} AND createdAt <= ${req.body.endDate}`)
             .order_by('updatedAt','desc')
-            .get('tbl_enrollment_request', (err, response) => {
+            .get((err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
                 res.status(200).send({ status: true, message: response });

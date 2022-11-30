@@ -15,7 +15,7 @@ const staticPath = path.join(process.cwd(),'public')
 router.post('/isLoggedIn', async (req, res) => {
     try {
 
-        const cacheResults = await redisClient.get(`auth/${req.body.access_token}`);
+        const cacheResults = await redisClient.get(req.body.userId);
 
         if (cacheResults) {
             res.status(200).send({ status: true, message: JSON.parse(cacheResults) });
@@ -102,7 +102,9 @@ router.post('/login', async (req, res) => {
                 response = { ...response, ...access_token };
     
                 if(response.sis_user_id == 'admin'){
-                    await redisClient.set(`auth/${response.access_token}`, JSON.stringify(response), {
+                    var id = response.id;
+
+                    await redisClient.set(id.toString(), JSON.stringify(response), {
                         EX: 3600,
                         NX: true,
                       });
@@ -129,8 +131,9 @@ router.post('/login', async (req, res) => {
                         canvasAPI.getUserLogin(response.id).then(async (loginDetail) => {
                             data.login_id = loginDetail[0].id;
                             data.account_id = loginDetail[0].account_id;
+                            var id = data.id;
 
-                            await redisClient.set(`auth/${data.access_token}`, JSON.stringify(data), {
+                            await redisClient.set(id.toString(), JSON.stringify(data), {
                                 EX: 300,
                                 NX: true,
                               });
@@ -341,7 +344,9 @@ router.get('/searchUser/:criteria', (req, res) => {
 });
 
 async function logout(req, res){
-    const result = await redisClient.del(`auth/${req.params.access_token}`);
+    let userId = req.params.userId;
+
+    const result = await redisClient.del(userId.toString());
 
     if(result){
         res.send({ status: true, message: 'success' })
@@ -351,7 +356,7 @@ async function logout(req, res){
     }
 }
 
-router.delete('/logout/:user_id/:access_token', async (req, res) => {
+router.delete('/logout/:user_id/:userId', async (req, res) => {
     if(req.params.user_id == 'admin'){
         logout(req, res);
 
