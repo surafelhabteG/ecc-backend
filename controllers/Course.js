@@ -109,4 +109,23 @@ router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
     }
 });
 
+
+// course extra information
+router.get('/getCourseExtraInfoDetail/:id', (req, res) => {
+    try {
+        pool.get_connection(qb => {
+            qb.select('*')
+            .where('id', req.params.id)
+            .get('tbl_course_extra_info', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
 module.exports = router;

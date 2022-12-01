@@ -6,7 +6,7 @@ const QueryBuilder = require('node-querybuilder');
 const connection = {
     host: 'localhost',
     user: 'root',
-    password: 'Abcd@5304',
+    password: '',
     database: 'ecc'
 };
 
