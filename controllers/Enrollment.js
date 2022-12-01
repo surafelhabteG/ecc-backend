@@ -155,10 +155,24 @@ router.get('/getAllEnrollmentRequest', (req, res) => {
 
 router.post('/filterEnrollmentRequest/:institution_id', (req, res) => {
     try {
+
+        var where;
+
+        if(req.body.startDate == req.body.endDate){
+            where = `createdAt = ${req.body.startDate}`;
+
+        } else {
+            where = `createdAt >= ${req.body.startDate} AND createdAt <= ${req.body.endDate}`;
+        }
+
+        if(req.body.institutionId){
+            where = `${where} AND institution_id = ${req.body.institutionId}`
+        }
+
         pool.get_connection(qb => {
             qb.select('*')
             .from('tbl_enrollment_request')
-            .where(`createdAt >= ${req.body.startDate} AND createdAt <= ${req.body.endDate}`)
+            .where(where)
             .order_by('updatedAt','desc')
             .get((err, response) => {
                 qb.release();
