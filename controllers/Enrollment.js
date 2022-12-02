@@ -5,19 +5,9 @@ const { convertBase64, deleteFiles } = require('../helpers/Files');
 
 const router = express.Router();
 const { uuid } = require('uuidv4');
-
 const canvasAPI = require('node-canvas-api');
 
-const QueryBuilder = require('node-querybuilder');
-
-const connection = {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ecc'
-};
-
-const pool = new QueryBuilder(connection, 'mysql', 'pool');
+const { pool } = require('../helpers/Db');
 
 // Enrollment
 router.post('/selfEnroll/:course_id', (req, res) => {
@@ -88,7 +78,7 @@ router.post('/createEnrollmentRequest', (req, res) => {
             pool.get_connection(qb => {
                 qb.insert('tbl_enrollment_request', req.body, (err) => {
                     qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err });
+                    if (err) return res.status(200).send({ status: false, message: err.message });
                     res.send({ status: true, message: 'request created successfully.' });
                 });
             });
@@ -215,7 +205,7 @@ router.post('/deleteEnrollmentRequest/:id', (req, res) => {
             pool.get_connection(qb => {
                 qb.delete('tbl_enrollment_request',{ id: req.body.id }, (err) => {
                     qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err });
+                    if (err) return res.status(200).send({ status: false, message: err.message });
     
                     res.status(200).send({ status: result.status, message: result.status ? 'data deleted successfully.' : result.message });
                 });

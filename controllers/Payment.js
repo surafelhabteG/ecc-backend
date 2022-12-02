@@ -5,16 +5,7 @@ const requestPromise = require('request-promise');
 const router = express.Router();
 const { uuid } = require('uuidv4');
 
-const QueryBuilder = require('node-querybuilder');
-
-const connection = {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ecc'
-};
-
-const pool = new QueryBuilder(connection, 'mysql', 'pool');
+const { pool } = require('../helpers/Db');
 
 async function updatePaymentSideeffect(data){
     try {
@@ -37,7 +28,7 @@ async function deletePaymentSideeffect(id){
         pool.get_connection(qb => {
             qb.delete('tbl_payment_sideeffect',{ id: id }, (err) => {
                 qb.release();
-                if (err) return { status: false, message: err };
+                if (err) return { status: false, message: err.message };
                 return { status: true, message: 'data deleted successfully.' };
             });
         });
@@ -255,7 +246,7 @@ router.get('/getAllFinancialReports',(req, res) => {
         pool.get_connection(qb => {
             qb.select('*')
             .order_by('updatedAt','desc')
-            .limit(5)
+            // .limit(50)
             .get('tbl_payment_sideeffect', (err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });

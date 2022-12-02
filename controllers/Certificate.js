@@ -6,16 +6,7 @@ const { uuid } = require('uuidv4');
 const transporter = require('../helpers/Mailer');
 const date = require('date-and-time');
 
-const QueryBuilder = require('node-querybuilder');
-
-const connection = {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ecc'
-};
-
-const pool = new QueryBuilder(connection, 'mysql', 'pool');
+const { pool } = require('../helpers/Db');
 
 //create certificate for user who has completed all course requirements
 router.post('/generateCertificate',(req,res) => {
@@ -28,7 +19,7 @@ router.post('/generateCertificate',(req,res) => {
     
                 qb.release()
     
-                if (err) return res.send({ status: false, message: err });
+                if (err) return res.send({ status: false, message: err.message });
     
                 res.send({ status: true, message: { id: req.body.id } });
     

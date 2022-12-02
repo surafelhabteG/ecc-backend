@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { convertBase64 } = require('../helpers/Files');
-const redisClient = require('../helpers/Db');
+const {redisClient} = require('../helpers/Db');
 const transporter = require('../helpers/Mailer');
 
 const router = express.Router();

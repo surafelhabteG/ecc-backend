@@ -1,16 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const QueryBuilder = require('node-querybuilder');
-
-const connection = {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ecc'
-};
-
-const pool = new QueryBuilder(connection, 'mysql', 'pool');
+const { pool } = require('../helpers/Db');
 
 router.post('/reportOne', (req, res) => {
     try {

@@ -1,13 +1,14 @@
 const redis = require('redis');
+const QueryBuilder = require('node-querybuilder');
 
-const connection = () => {
-  return {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ecc'
-  }
+const connection = {
+  host: 'localhost',
+  user: 'root',
+  password: 'Abcd@5304',
+  database: 'ecc'
 };
+
+const pool = new QueryBuilder(connection, 'mysql', 'pool');
 
 var redisClient;
 
@@ -19,6 +20,4 @@ var redisClient;
   await redisClient.connect();
 })();
 
-
-module.exports = connection();
-module.exports = redisClient;
+module.exports = { pool, redisClient };
