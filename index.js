@@ -2,6 +2,16 @@ const app = require('express')();
 const express = require('express');
 const httpServer = require('http').createServer(app);
 
+// Joi validator
+const Joi = require('joi')
+const validator = require('express-joi-validation').createValidator({passError: false, statusCode: 200})
+
+
+const querySchema = Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().required().email()
+})
+
 // default imports
 const cors = require('cors');
 const bodyParser = require('body-parser')
@@ -29,5 +39,15 @@ app.use(require('./controllers/Util'));
 app.get('/', (req, res) => {
     res.status(200).send('welcome to Ecc Express Api App');
 });
+
+app.post('/orders', validator.body(querySchema), (req, res, next) => {
+    try {
+        // If we're in here then the query was valid!  
+        res.end(`Hello ${req.body.name}!`)
+
+    } catch(error){
+        res.send({  message: error })
+    }
+})
 
 httpServer.listen(port, () => console.log(`listening on port ${port}`));
