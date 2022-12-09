@@ -21,7 +21,7 @@ router.get('/getAllCourses', async (req, res) => {
             canvasAPI.getAllCoursesInAccount(2).then( async (response) => { 
                 if(response.length){
                     await redisClient.set('courses', JSON.stringify(response), {
-                        EX: 300,
+                        EX: 30,
                         // NX: true,
                     });
                 }
@@ -54,7 +54,7 @@ router.get('/getAllModules/:courseId', async (req, res) => {
         } else {
             canvasAPI.getModules(req.params.courseId).then(async (response) => {
                 await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
-                    EX: 300,
+                    EX: 30,
                   });
                 res.status(200).send(response);
             }).catch((errors) => {
