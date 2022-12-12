@@ -236,4 +236,39 @@ router.get('/getMyEnrollmentRequest/:institution_id',(req, res) => {
     }
 });
 
+router.post('/createEnrollmentSideEffect', (req, res) => {
+    try {
+
+        req.body.id = uuid().replace('-', '');
+    
+        pool.get_connection(qb => {
+            qb.insert('tbl_course_enrollment_sideeffect', req.body, (err) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.message });
+                res.send({ status: true, message: 'success.' });
+            });
+        });
+   
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
+
+router.post('/updateEnrollmentSideEffect', (req, res) => {
+    try {
+
+        pool.get_connection(qb => {
+            qb.update('tbl_course_enrollment_sideeffect', req.body, { id: req.body.id }, (err) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.message });
+                res.send({ status: true, message: 'success.' });
+            });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
 module.exports = router;
