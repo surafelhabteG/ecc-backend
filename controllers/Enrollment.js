@@ -271,4 +271,21 @@ router.post('/updateEnrollmentSideEffect', (req, res) => {
     }
 });
 
+router.get('/getEnrollmentSideEffect/:userId', (req, res) => {
+    try {
+        pool.get_connection(qb => {
+            qb.select('id,courseId,requiredModules,completedModules,progress')
+            .where('userId', req.params.userId)
+                .get('tbl_course_enrollment_sideeffect', (err, response) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                    res.status(200).send({ status: true, message: response });
+                });
+        });
+    
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
 module.exports = router;
