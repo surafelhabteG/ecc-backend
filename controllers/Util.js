@@ -46,22 +46,23 @@ router.post('/deleteFiles', async(req, res) => {
 
 router.get('/getSlidePhotos', async(req, res) => {
     const directoryPath = path.join(process.cwd(), 'public/images/slide');
+    res.status(200).send({ status: false, message: [] })
 
-    fs.readdir(directoryPath, function (err, files) {
-        if (err) {
-            res.status(200).send({ status: false, message: err.message })
+    // fs.readdir(directoryPath, function (err, files) {
+    //     if (err) {
+    //         res.status(200).send({ status: false, message: err.message })
 
-        } else {
-            let newFiles = [];
+    //     } else {
+    //         let newFiles = [];
 
-            files.forEach((file) => {
-                newFiles.push(`images/slide/${file}`);
-            });
+    //         files.forEach((file) => {
+    //             newFiles.push(`images/slide/${file}`);
+    //         });
 
-            res.status(200).send({ status: true, message: newFiles })
-        }
+    //         res.status(200).send({ status: true, message: newFiles })
+    //     }
 
-    });
+    // });
 });
 
 
