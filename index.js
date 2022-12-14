@@ -35,6 +35,8 @@ app.use(require('./controllers/Course'));
 app.use(require('./controllers/Enrollment'));
 app.use(require('./controllers/Payment'));
 app.use(require('./controllers/Util'));
+app.use(require('./controllers/Reports'));
+
 
 app.get('/', (req, res) => {
     res.status(200).send('welcome to Ecc Express Api App');
