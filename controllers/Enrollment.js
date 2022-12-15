@@ -258,8 +258,11 @@ router.post('/createEnrollmentSideEffect', (req, res) => {
 router.post('/updateEnrollmentSideEffect', (req, res) => {
     try {
 
+        let body = req.body;
+        let where = { userId: body.userId, courseId: body.courseId };
+        
         pool.get_connection(qb => {
-            qb.update('tbl_course_enrollment_sideeffect', req.body, { id: req.body.id }, (err) => {
+            qb.update('tbl_course_enrollment_sideeffect', body, where, (err) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.message });
                 res.send({ status: true, message: 'success.' });

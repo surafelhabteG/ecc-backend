@@ -80,13 +80,16 @@ router.post('/getAllTraineeListReports',(req, res) => {
 
         let select = `*,DATE_FORMAT(createdAt, "%M %d %Y") createdAt`;
 
-        var where;
+        var where = "id is not null";
 
-        if(body.dateRange[0] == body.dateRange[1]){
-            where = `createdAt = ${body.dateRange[0]}`;
-
-        } else {
-            where = `createdAt >= ${body.dateRange[0]} AND createdAt <= ${body.dateRange[1]}`;
+        if(body.dateRange){
+    
+            if(body.dateRange[0] == body.dateRange[1]){
+                where = `createdAt = ${body.dateRange[0]}`;
+    
+            } else {
+                where = `createdAt >= ${body.dateRange[0]} AND createdAt <= ${body.dateRange[1]}`;
+            }
         }
 
         pool.get_connection(qb => {
@@ -105,5 +108,30 @@ router.post('/getAllTraineeListReports',(req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+
+router.get('/getAllTraineeAverageReports/:courseId',(req, res) => {
+    try {
+        let select = `AVG(progress) As averageProgress, 
+                      AVG(DATEDIFF(updatedAt, createdAt)) As averageCompletionTime
+                      `;
+
+        pool.get_connection(qb => {
+            qb.select(select, false)
+            .where('courseId', req.params.courseId)
+            .get('tbl_course_enrollment_sideeffect', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ status: true, message: response });
+            });
+        });
+    
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
+
+
 
 module.exports = router;
