@@ -1,6 +1,7 @@
 const app = require('express')();
 const express = require('express');
 const httpServer = require('http').createServer(app);
+const jwt = require('jsonwebtoken');
 
 // Joi validator
 const Joi = require('joi')
@@ -38,9 +39,37 @@ app.use(require('./controllers/Util'));
 app.use(require('./controllers/Reports'));
 
 
-app.get('/', (req, res) => {
-    res.status(200).send('welcome to Ecc Express Api App');
+
+function authenticateToken(req, res, next) {
+    const token = req.headers['authorization']
+  
+    if (token == null) return res.sendStatus(401)
+  
+    jwt.verify(token, process.env.TOKEN_SECRET, (err, user) => {
+  
+      if (err) return res.sendStatus(403)
+  
+      req.user = user
+  
+      next()
+    })
+  }
+
+app.get('/generateToken', (req, res) => {
+    let token = jwt.sign({ username: 'surafel' }, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
+    res.status(200).send(token);
 });
+
+app.get('/verifayToken', authenticateToken, (req, res) => {
+    res.status(200).send('success');
+})
+
+app.get('/generateToken', (req, res) => {
+    let token = jwt.sign(username, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
+    res.status(200).send(token);
+});
+
+
 
 app.post('/orders', validator.body(querySchema), (req, res, next) => {
     try {
