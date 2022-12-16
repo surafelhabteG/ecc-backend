@@ -112,8 +112,9 @@ router.post('/getAllTraineeListReports',(req, res) => {
 
 router.get('/getAllTraineeAverageReports/:courseId',(req, res) => {
     try {
-        let select = `IFNULL(courseTitle,'not available') As courseTitle,IFNULL(courseId,AVG(progress),0) As averageProgress, 
-                      IFNULL(AVG(DATEDIFF(updatedAt, createdAt)),0) As averageCompletionTime
+        
+        let select = `courseTitle,courseId,AVG(progress) As averageProgress, 
+                      AVG(DATEDIFF(updatedAt, createdAt)) As averageCompletionTime
                       `;
 
         pool.get_connection(qb => {

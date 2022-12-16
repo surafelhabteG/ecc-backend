@@ -63,7 +63,7 @@ const deleteFiles = (req, res, isDirectory = false) => {
         if (fs.existsSync(`${staticPath}/${req.body.url}`)) {
 
             if(isDirectory){
-                fs.rmdirSync(`${staticPath}/${req.body.url}`,{recursive: true});
+                fs.rmSync(`${staticPath}/${req.body.url}`,{recursive: true});
 
             } else {
                 fs.unlinkSync(`${staticPath}/${req.body.url}`);
