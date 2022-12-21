@@ -20,8 +20,20 @@ router.get('/getAllCourses', async (req, res) => {
         } else {
             canvasAPI.getAllCoursesInAccount(2).then( async (response) => { 
                 if(response.length){
+                    await response.forEach(element => {
+                        pool.get_connection(qb => {
+                            qb.select('*')
+                            .where('courseId', element.id)
+                            .get('tbl_course_extra_info', (err, extra) => {
+                                qb.release();
+                                if (err) element.extraInfo = null;
+                                element.extraInfo = extra;
+                            });
+                        });
+                    });
+                    
                     await redisClient.set('courses', JSON.stringify(response), {
-                        EX: 30,
+                        EX: 300,
                         // NX: true,
                     });
                 }
@@ -54,7 +66,7 @@ router.get('/getAllModules/:courseId', async (req, res) => {
         } else {
             canvasAPI.getModules(req.params.courseId).then(async (response) => {
                 await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
-                    EX: 30,
+                    EX: 300,
                   });
                 res.status(200).send(response);
             }).catch((errors) => {
@@ -74,47 +86,17 @@ router.get('/getAllModules/:courseId', async (req, res) => {
 
 router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
     try {
-
-        // const cacheResults = await redisClient.get(`courseExtraInfo/${req.params.courseId}`);
-
-        // if (cacheResults) {
-        //     res.status(200).send(JSON.parse(cacheResults));
-
-        // } else {
-
-            // canvasAPI.getCourseFile(req.params.courseId).then((response) => {
-            //     let file = response.find((element) => element.display_name == "extraInfo.json");
-        
-            //     request.get(file.url, async function (error, response, body) {
-            //         if (!error && response.statusCode == 200) {
-            //             await redisClient.set(`courseExtraInfo/${req.params.courseId}`, body, {
-            //                 EX: 300,
-            //                 NX: true,
-            //               });
-            //             res.status(200).send(JSON.parse(body));
-            //         }
-            //     });
-        
-            // }).catch((errors) => {
-            //     res.status(200).send({
-            //         status: false,
-            //         message: errors.message
-            //     })
-            // });
-
-            pool.get_connection(qb => {
-                qb.select('*')
-                .where('courseId', req.params.courseId)
-                .get('tbl_course_extra_info', (err, response) => {
-                    qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                    res.status(200).send({ 
-                        status: true, message: response 
-                    });
+        pool.get_connection(qb => {
+            qb.select('*')
+            .where('courseId', req.params.courseId)
+            .get('tbl_course_extra_info', (err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ 
+                    status: true, message: response 
                 });
             });
-        // }
-
+        });
     } catch (err) {
         res.status(200).send({
             status: false,

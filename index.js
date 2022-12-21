@@ -2,6 +2,7 @@ const app = require('express')();
 const express = require('express');
 const httpServer = require('http').createServer(app);
 const jwt = require('jsonwebtoken');
+const router = express.Router();
 
 // Joi validator
 const Joi = require('joi')
@@ -37,8 +38,7 @@ app.use(require('./controllers/Enrollment'));
 app.use(require('./controllers/Payment'));
 app.use(require('./controllers/Util'));
 app.use(require('./controllers/Reports'));
-
-
+app.use('/category',require('./controllers/Category'));
 
 function authenticateToken(req, res, next) {
     const token = req.headers['authorization']
@@ -57,7 +57,7 @@ function authenticateToken(req, res, next) {
 
 app.get('/generateToken', (req, res) => {
     let token = jwt.sign({ username: 'surafel' }, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
-    res.status(200).send(token);
+    res.status(200).send({ status: true, data: token });
 });
 
 app.get('/verifayToken', authenticateToken, (req, res) => {
