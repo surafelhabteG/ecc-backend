@@ -64,7 +64,7 @@ router.get('/getAllModules/:courseId', async (req, res) => {
             res.status(200).send(JSON.parse(cacheResults));
 
         } else {
-            canvasAPI.getModules(req.params.courseId).then(async (response) => {
+            canvasAPI.getModules(req.params.courseId, req.query.studentId).then(async (response) => {
                 await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
                     EX: 300,
                   });
@@ -104,9 +104,6 @@ router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
         })
     }
 });
-
-
-
 
 // course extra information
 router.get('/getCourseExtraInfoDetail/:id', (req, res) => {

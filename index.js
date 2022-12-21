@@ -70,7 +70,6 @@ app.get('/generateToken', (req, res) => {
 });
 
 
-
 app.post('/orders', validator.body(querySchema), (req, res, next) => {
     try {
         // If we're in here then the query was valid!  
