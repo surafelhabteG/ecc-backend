@@ -18,28 +18,47 @@ router.get('/getAllCourses', async (req, res) => {
             res.status(200).send(JSON.parse(cacheResults));
 
         } else {
+
             canvasAPI.getAllCoursesInAccount(2).then( async (response) => { 
                 if(response.length){
-                    await response.forEach(element => {
-                        pool.get_connection(qb => {
-                            qb.select('*')
-                            .where('courseId', element.id)
-                            .get('tbl_course_extra_info', (err, extra) => {
-                                qb.release();
-                                if (err) element.extraInfo = null;
-                                element.extraInfo = extra;
-                            });
-                        });
-                    });
-                    
                     await redisClient.set('courses', JSON.stringify(response), {
-                        EX: 300,
+                        EX: 30,
                         // NX: true,
                     });
                 }
 
-                res.status(200).send(response);
+                await res.status(200).send(response);
   
+            }).catch((errors) => {
+                res.status(200).send({
+                    status: false,
+                    message: errors.message
+                })
+            });  
+        }
+    } catch (err) {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    }
+});
+
+
+router.get('/getAllModules/:courseId', async (req, res) => {
+    try {
+
+        const cacheResults = await redisClient.get(`modules/${req.params.courseId}`);
+
+        if (cacheResults) {
+            res.status(200).send(JSON.parse(cacheResults));
+
+        } else {
+            canvasAPI.getModules(req.params.courseId, req.query.studentId).then(async (response) => {
+                await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
+                    EX: 30,
+                  });
+                res.status(200).send(response);
             }).catch((errors) => {
                 res.status(200).send({
                     status: false,
@@ -55,27 +74,40 @@ router.get('/getAllCourses', async (req, res) => {
     }
 });
 
-router.get('/getAllModules/:courseId', async (req, res) => {
+
+router.get('/getQuizzes/:courseId', async (req, res) => {
     try {
 
-        const cacheResults = await redisClient.get(`modules/${req.params.courseId}`);
+        canvasAPI.getQuizzes(req.params.courseId).then(async (response) => {
+            res.status(200).send({ status: true, message: response });
+        }).catch((errors) => {
+            res.status(200).send({
+                status: false,
+                message: errors.message
+            })
+        });
+        
+    } catch (err) {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    }
+});
 
-        if (cacheResults) {
-            res.status(200).send(JSON.parse(cacheResults));
+router.get('/getQuizSubmission/:courseId/:quizId',(req, res) => {
+    try {
 
-        } else {
-            canvasAPI.getModules(req.params.courseId, req.query.studentId).then(async (response) => {
-                await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
-                    EX: 300,
-                  });
-                res.status(200).send(response);
-            }).catch((errors) => {
-                res.status(200).send({
-                    status: false,
-                    message: errors.message
-                })
-            });
-        }
+        canvasAPI.getQuizSubmissions(req.params.courseId, req.params.quizId).then(async (response) => {
+            await res.status(200).send({ status: true, message: response ? response[0].quiz_submissions : [] });
+
+        }).catch((errors) => {
+            res.status(200).send({
+                status: false,
+                message: errors.message
+            })
+        });
+        
     } catch (err) {
         res.status(200).send({
             status: false,
@@ -172,5 +204,32 @@ router.delete('/deleteCourseExtraInfoDetail/:id', async (req,res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 })
+
+
+
+// course assessment side effect
+router.post('/createAssessmentSideeffect', (req, res) => {
+    var body = req.body;
+
+    
+    body.forEach(element => {
+        element.id = uuid().replace('-', '');
+    });
+
+    try {
+    
+        pool.get_connection(qb => {
+            qb.insert_batch('tbl_course_assessment_sideeffect', body, (err) => {
+                qb.release();
+                if (err) return res.send({ status: false, message: err.sqlMessage });
+                res.send({ status: true, message: 'success.' });
+            });
+        });
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+
+});
 
 module.exports = router;

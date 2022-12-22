@@ -53,7 +53,7 @@ function authenticateToken(req, res, next) {
   
       next()
     })
-  }
+}
 
 app.get('/generateToken', (req, res) => {
     let token = jwt.sign({ username: 'surafel' }, process.env.TOKEN_SECRET, { expiresIn: '1800s' });

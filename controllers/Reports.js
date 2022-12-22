@@ -94,10 +94,11 @@ router.post('/getAllTraineeListReports',(req, res) => {
 
         pool.get_connection(qb => {
             qb.select(select, false)
-            .order_by('createdAt','desc')
+            .order_by('traineeName','Asc')
             .where('courseId', body.courseId)
+            .where('quizId', body.quizId)
             .where(where)
-            .get('tbl_course_enrollment_sideeffect', (err, response) => {
+            .get('tbl_course_assessment_sideeffect', (err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
                 res.status(200).send({ status: true, message: response });
