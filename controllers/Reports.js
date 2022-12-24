@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const { pool } = require('../helpers/Db');
+const canvasAPI = require('node-canvas-api');
 
 router.get('/getAllFinancialReports',(req, res) => {
     try {
@@ -92,23 +93,85 @@ router.post('/getAllTraineeListReports',(req, res) => {
             }
         }
 
-        pool.get_connection(qb => {
-            qb.select(select, false)
-            .order_by('traineeName','Asc')
-            .where('courseId', body.courseId)
-            .where('quizId', body.quizId)
-            .where(where)
-            .get('tbl_course_assessment_sideeffect', (err, response) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                res.status(200).send({ status: true, message: response });
-            });
+        datas = [];
+
+        canvasAPI.getQuizSubmissions(body.courseId, body.quizId).then(async (response) => {
+            await res.status(200).send({ status: true, message: response });
+
+            // if(response){
+
+            //     if('quiz_submissions' in response[0]){
+                    
+            //         var i = 0;
+    
+            //         await response[0].users.forEach(async (element) => {
+            //             canvasAPI.getUserCustomData(element.id).then( async (custom) => {
+                            
+            //                  datas.push({
+            //                     traineeName: element.name,
+            //                     traineeSex: custom.data.sex,
+            //                     traineeLocation: custom.data.country ? `${custom.data.country} ${custom.data.city}` : '-- not indicated by the user --',
+            //                     institution: custom.data.organizationName ?? '-- not indicated by the user --',
+            //                     score: response[0].quiz_submissions[i].score,
+            //                     moduleName:req.body.moduleName
+            //                 });
+        
+            //                  i++;
+
+            //                 if(response[0].users.length - 1 == datas.length){
+            //                     await res.status(200).send({ status: true, message: datas });
+            //                 }
+            //                 // } else if(response[0].users.length - 1 == datas.length) {
+            //                 //     await res.status(200).send({ status: true, message: datas });
+                                
+            //                 // } else {
+            //                 //     await res.status(200).send({ status: true, message: datas });
+            //                 // }
+                            
+            //             }).catch((err) => {
+            //                 return { status: false, message: err.message };
+            //             });
+
+            //         });
+
+
+            //     } else {
+            //         await res.status(200).send({ status: true, message: datas });
+            //     }
+
+            // } else {
+            //     await res.status(200).send({ status: true, message: datas });
+            // }
+
+        }).catch((err) => {
+            res.status(200).send({ status: false, message: err.message });
+
         });
+            
+    
+        // pool.get_connection(qb => {
+        //     qb.select(select, false)
+        //     .order_by('traineeName','Asc')
+        //     .where('courseId', body.courseId)
+        //     .where('quizId', body.quizId)
+        //     .where(where)
+        //     .get('tbl_course_assessment_sideeffect', (err, response) => {
+        //         qb.release();
+        //         if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+        //         res.status(200).send({ status: true, message: response });
+        //     });
+        // });
     
     } catch(err){
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+
+async function getCustomData(id){    
+    
+
+}
 
 
 router.get('/getAllTraineeAverageReports/:courseId',(req, res) => {

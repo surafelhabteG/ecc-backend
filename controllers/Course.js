@@ -58,7 +58,10 @@ router.get('/getAllModules/:courseId', async (req, res) => {
                 await redisClient.set(`modules/${req.params.courseId}`, JSON.stringify(response), {
                     EX: 30,
                   });
-                res.status(200).send(response);
+                res.status(200).send({
+                    status: true,
+                    message: response
+                });
             }).catch((errors) => {
                 res.status(200).send({
                     status: false,
