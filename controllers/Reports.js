@@ -53,23 +53,46 @@ router.post('/filterFinancialReports', (req, res) => {
 
 
 router.get('/getAllTraineePerformanceReports/:courseId',(req, res) => {
-    try {
-        let select = `*,IF(requiredModules=completedModules, DATE_FORMAT(updatedAt, "%M %d %Y"), "Not-Completed") As updatedAt,
-                    DATEDIFF(updatedAt, createdAt) As totalDaysTaken, DATE_FORMAT(createdAt, "%M %d %Y") createdAt`;
+    // try {
+    //     let select = `*,IF(requiredModules=completedModules, DATE_FORMAT(updatedAt, "%M %d %Y"), "Not-Completed") As updatedAt,
+    //                 DATEDIFF(updatedAt, createdAt) As totalDaysTaken, DATE_FORMAT(createdAt, "%M %d %Y") createdAt`;
 
-        pool.get_connection(qb => {
-            qb.select(select, false)
-            .order_by('createdAt','desc')
-            .where('courseId', req.params.courseId)
-            .get('tbl_course_enrollment_sideeffect', (err, response) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                res.status(200).send({ status: true, message: response });
-            });
-        });
+    //     pool.get_connection(qb => {
+    //         qb.select(select, false)
+    //         .order_by('createdAt','desc')
+    //         .where('courseId', req.params.courseId)
+    //         .get('tbl_course_enrollment_sideeffect', (err, response) => {
+    //             qb.release();
+    //             if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+    //             res.status(200).send({ status: true, message: response });
+    //         });
+    //     });
     
-    } catch(err){
-        res.status(200).send({ status: false, message: err.message });
+    // } catch(err){
+    //     res.status(200).send({ status: false, message: err.message });
+    // }
+
+
+    try {
+    
+        canvasAPI.getCoursesBulkProgress(req.params.courseId).then( async (response) => { 
+            await res.status(200).send({
+                status: true,
+                message: response
+            });
+
+        }).catch((errors) => {
+            res.status(200).send({
+                status: false,
+                message: errors.message
+            })
+        });  
+        
+    } catch (err) {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
     }
 });
 
@@ -166,13 +189,6 @@ router.post('/getAllTraineeListReports',(req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
-
-
-async function getCustomData(id){    
-    
-
-}
-
 
 router.get('/getAllTraineeAverageReports/:courseId',(req, res) => {
     try {

@@ -59,6 +59,20 @@ router.get('/getUserEnrollment/:userId', (req, res) => {
     });
 });
 
+router.get('/getEnrollmentsInCourse/:courseId', (req, res) => {
+    canvasAPI.getEnrollmentsInCourse(req.params.courseId).then(
+        response => res.send({
+            status: true,
+            message: response
+        })
+    ).catch((errors) => {
+        res.status(200).send({
+            status: false,
+            message: errors.message
+        })
+    });
+});
+
 // enrollment request
 router.post('/createEnrollmentRequest', (req, res) => {
     try {

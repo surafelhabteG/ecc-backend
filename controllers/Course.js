@@ -45,6 +45,31 @@ router.get('/getAllCourses', async (req, res) => {
 });
 
 
+router.post('/searchCourses', async (req, res) => {
+    try {
+
+        canvasAPI.searchCourse(req.body.courseTitle).then( async (response) => { 
+            await res.status(200).send({
+                status: true,
+                message: response
+            });
+
+        }).catch((errors) => {
+            res.status(200).send({
+                status: false,
+                message: errors.message
+            })
+        });  
+        
+    } catch (err) {
+        res.status(200).send({
+            status: false,
+            message: err.message
+        })
+    }
+});
+
+
 router.get('/getAllModules/:courseId', async (req, res) => {
     try {
 
