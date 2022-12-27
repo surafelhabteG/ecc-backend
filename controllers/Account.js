@@ -187,23 +187,41 @@ router.post('/updateProfile/:userId', (req, res) => {
     var custom_data = req.body.custom_data;
     var user_data = req.body.user_data;
 
+    var login_data = {
+        login : {
+            sis_user_id: custom_data.data.organizationName
+        }
+    };
 
     canvasAPI.updateUser(req.params.userId, user_data).then((response) => {
         if (response) {
             canvasAPI.storeCustomData(url, custom_data).then((response) => {
                 if (response) {
-        
-                    var result = { status: true };
-        
-                    if (req.body.memberId !== null) {
-                        result = convertBase64(req.body.memberId, req.params.userId);
-                        !result.status ? message = `${message}, but unable to upload file.` : null;
-                    }
-        
-                    res.status(200).send({ status: true, message: message });
+                    canvasAPI.updateLogin(req.body.account_id,req.body.login_id, login_data).then((response) => {
+                        if (response) {
+                
+                            var result = { status: true };
+                
+                            if (req.body.memberId !== null) {
+                                result = convertBase64(req.body.memberId, req.params.userId);
+                                !result.status ? message = `${message}, but unable to upload file.` : null;
+                            }
+                
+                            res.status(200).send({ status: true, message: message });
+
+                        } else {
+                            res.status(200).send({ status: false, message: 'Faile to update the profile.' });
+                        }
+
+                    }).catch((errors) => {
+                        res.status(200).send({
+                            status: false,
+                            message: errors.message
+                        });
+                    });    
         
                 } else {
-                    res.status(200).send({ status: false, message: 'fail to update the profile.' });
+                    res.status(200).send({ status: false, message: 'Faile to update the profile.' });
                 }
         
             }).catch((errors) => {
@@ -214,7 +232,7 @@ router.post('/updateProfile/:userId', (req, res) => {
             });
 
         } else {
-            res.status(200).send({ status: false, message: 'fail to update the profile.' });
+            res.status(200).send({ status: false, message: 'Faile to update the profile.' });
         }
 
     }).catch((errors) => {
@@ -231,7 +249,7 @@ router.post('/changePassword/:accountId/:loginId', (req, res) => {
             res.status(200).send({ status: true, message: 'password changed successfully' });
 
         } else {
-            res.status(200).send({ status: false, message: 'fail to change password.' });
+            res.status(200).send({ status: false, message: 'Faile to change password.' });
         }
     }).catch((errors) => {
         res.status(200).send({
@@ -240,6 +258,7 @@ router.post('/changePassword/:accountId/:loginId', (req, res) => {
         })
     });
 });
+
 
 router.post('/resetPassword', async(req, res) => {
     canvasAPI.searchUser(`sis_login_id:${req.body.email}`).then(async (response) => {
