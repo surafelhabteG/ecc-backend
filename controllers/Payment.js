@@ -126,7 +126,7 @@ router.post('/paymentSuccessCallBack', async (req, res) => {
 
 router.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
     const requestOption = {
-        'method': 'POST',
+        'method': 'GET',
         'uri':`${process.env.MEDA_PAY_URL}/${req.params.billReferenceNumber}`,
         'headers': {
            'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ router.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
       .then(function (response) {
         response = JSON.parse(response);
 
-        if (response.status == 'completed') {
+        if (response.status == 'PAYED') {
             let data = {
                 status: response.status,
                 id: req.params.paymentId,
@@ -222,6 +222,14 @@ router.post('/updatePaymentSideeffect', (req, res) => {
     }
 });
 
+router.delete('/deletePaymentSideeffect/:paymentId', (req, res) => {
+    let result = deletePaymentSideeffect(req.params.paymentId);
+
+    res.status(200).send(result);
+
+});
+
+
 router.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
     try {
         
@@ -239,5 +247,7 @@ router.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+
 
 module.exports = router;
