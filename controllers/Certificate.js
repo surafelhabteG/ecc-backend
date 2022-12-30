@@ -75,7 +75,9 @@ router.get('/viewCertificate/:id', async (req,res) => {
                     response = await response[0];
                     response.createdAt = date.format(response.createdAt, 'YYYY/MM/DD HH:mm:ss');
                     
-                    return res.render('certificate.ejs',response);
+                    return await res.render('certificate.ejs',response);
+                    // return res.status(200).send({ status: true, message: response });
+
 
                 });
         })

@@ -46,29 +46,67 @@ router.get('/getAllCourses', async (req, res) => {
 
 
 router.post('/searchCourses', async (req, res) => {
+
     try {
 
-        canvasAPI.searchCourse(req.body.courseTitle).then( async (response) => { 
-            await res.status(200).send({
-                status: true,
-                message: response
-            });
+        pool.get_connection(qb => {
+            qb.select('*')
+            .from('tbl_course_extra_info As ext')
+            .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
+            .or_like('courseTitle', req.body.courseTitle)
 
-        }).catch((errors) => {
-            res.status(200).send({
-                status: false,
-                message: errors.message
-            })
-        });  
-        
-    } catch (err) {
-        res.status(200).send({
-            status: false,
-            message: err.message
-        })
+            .get((err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ 
+                    status: true, message: response 
+                });
+            });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
     }
+
 });
 
+router.post('/filterCourses', async (req, res) => {
+    var body = req.body;
+
+    try {
+
+        pool.get_connection(qb => {
+
+            var keys = Object.keys(body);
+            var values = Object.values(body);
+
+            qb.select('*')
+            .from('tbl_course_extra_info As ext')
+            .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
+
+            keys.forEach((key, index) => {
+
+                if(values[index].length){
+                    qb.where_in(key, values[index])
+                }
+    
+            });
+
+            qb.get((err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ 
+                    status: true, message: response 
+                });
+            });
+
+        })
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+
+});
 
 router.get('/getAllModules/:courseId', async (req, res) => {
     try {
@@ -149,7 +187,7 @@ router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
         pool.get_connection(qb => {
             qb.select('*')
             .from('tbl_course_extra_info As ext')
-            .join('tbl_course_categories As cat', 'ext.category=cat.id')
+            .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
             .where('courseId', req.params.courseId)
             .get((err, response) => {
                 qb.release();
@@ -170,6 +208,32 @@ router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
 });
 
 // course extra information
+router.get('/getAllCourseExtraInfo/:limit', (req, res) => {
+
+    try {
+        pool.get_connection(qb => {
+            qb.select('*')
+            .from('tbl_course_extra_info As ext')
+            .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
+
+            if(req.params.limit !== 'all'){
+                qb.limit(req.params.limit)
+            } 
+
+            qb.get((err, response) => {
+                qb.release();
+                if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
+                res.status(200).send({ 
+                    status: true, message: response 
+                });
+            });
+        });
+
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+});
+
 router.get('/getCourseExtraInfoDetail/:id', (req, res) => {
     try {
         pool.get_connection(qb => {

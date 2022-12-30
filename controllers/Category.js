@@ -37,7 +37,7 @@ router.post('/update', (req, res) => {
 router.get('', (req, res) => {
     try {
         pool.get_connection(qb => {
-            qb.select('*')
+            qb.select(`*, ${false} As isChecked`, false)
             .order_by('category','desc')
             .get('tbl_course_categories', (err, response) => {
                 qb.release();
