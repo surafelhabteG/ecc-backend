@@ -87,7 +87,7 @@ router.post('/filterCourses', async (req, res) => {
             keys.forEach((key, index) => {
 
                 if(values[index].length){
-                    qb.where_in(key, values[index])
+                    qb.or_where_in(key, values[index])
                 }
     
             });
