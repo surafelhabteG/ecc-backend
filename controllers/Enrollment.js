@@ -8,6 +8,10 @@ const { uuid } = require('uuidv4');
 const canvasAPI = require('node-canvas-api');
 
 const { pool } = require('../helpers/Db');
+const fs = require("fs")
+const path = require('path')
+
+const staticPath = path.join(process.cwd(),'public')
 
 // Enrollment
 router.post('/selfEnroll/:course_id', (req, res) => {
@@ -140,16 +144,23 @@ router.post('/updateEnrollmentRequest', (req, res) => {
     }
 });
 
-router.get('/getAllEnrollmentRequest', (req, res) => {
+router.get('/getAllEnrollmentRequest/:limit', (req, res) => {
     try {
+
         pool.get_connection(qb => {
             qb.select('*')
             .order_by('updatedAt','desc')
-            .get('tbl_enrollment_request', (err, response) => {
+
+            if(req.params.limit !== 'all'){
+                qb.limit(req.params.limit)
+            } 
+
+            qb.get('tbl_enrollment_request', (err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
                 res.status(200).send({ status: true, message: response });
             });
+
         });
 
     } catch(err){
@@ -197,10 +208,31 @@ router.get('/getDetailEnrollmentRequest/:id', (req, res) => {
         pool.get_connection(qb => {
             qb.select('*')
             .where('id', req.params.id)
-                .get('tbl_enrollment_request', (err, response) => {
+                .get('tbl_enrollment_request', async(err, response) => {
                     qb.release();
-                    if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
-                    res.status(200).send({ status: true, message: response });
+                    if (err) {
+                        return res.status(200).send({ status: false, message: err.sqlMessage });
+
+                    } else {
+
+                        var url = `${staticPath}/uploads/requests/${req.params.id}`; 
+
+                        if (fs.existsSync(`${url}/traineelist.pdf`)) {
+                            response[0].traineelist = true;
+
+                        } else {
+                            response[0].traineelist = false;
+                        }  
+
+                        if (fs.existsSync(`${url}/bankSlip.pdf`)) {
+                            response[0].bankSlip = true;
+
+                        } else {
+                            response[0].bankSlip = false;
+                        }
+
+                        await res.status(200).send({ status: true, message: response });
+                    }    
                 });
         });
     
@@ -231,14 +263,18 @@ router.post('/deleteEnrollmentRequest/:id', (req, res) => {
     }
 });
 
-router.get('/getMyEnrollmentRequest/:institution_id',(req, res) => {
+router.get('/getMyEnrollmentRequest/:institution_id/:limit',(req, res) => {
     try {
         pool.get_connection(qb => {
             qb.select('*')
             .order_by('updatedAt','desc')
             .where('institution_id', req.params.institution_id)
-            .limit(5)
-            .get('tbl_enrollment_request', (err, response) => {
+
+            if(req.params.limit !== 'all'){
+                qb.limit(req.params.limit)
+            } 
+
+            qb.get('tbl_enrollment_request', (err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
                 res.status(200).send({ status: true, message: response });
@@ -274,7 +310,7 @@ router.post('/updateEnrollmentSideEffect', (req, res) => {
 
         let body = req.body;
         let where = { userId: body.userId, courseId: body.courseId };
-        
+
         pool.get_connection(qb => {
             qb.update('tbl_course_enrollment_sideeffect', body, where, (err) => {
                 qb.release();
@@ -282,10 +318,12 @@ router.post('/updateEnrollmentSideEffect', (req, res) => {
                 res.send({ status: true, message: 'success.' });
             });
         });
-
+        
+        
     } catch(err){
         res.status(200).send({ status: false, message: err.message });
     }
+    
 });
 
 router.get('/getEnrollmentSideEffect/:userId', (req, res) => {
