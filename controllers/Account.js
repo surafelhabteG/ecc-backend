@@ -268,8 +268,7 @@ router.post('/resetPassword', async(req, res) => {
             // call email sender for email reset
             let message = `
                 Hi ${response.name}, You recently requested to reset the password for your account. 
-                Click the button below link to proceed. 
-                ${req.body.link }?user_id=${response.id}
+                Click the link below to proceed. <a class='btn btn-light' href=' ${req.body.link }?user_id=${response.id}'>Reset link</a>
                 If you did not request a password reset, 
                 please ignore this email or reply to let us know.
             `;
@@ -280,7 +279,7 @@ router.post('/resetPassword', async(req, res) => {
                     from: 'surafel@360ground.com',
                     to: req.body.email,
                     subject: `Password reset`,
-                    text: message,
+                    html: message,
                 };
             
                 transporter.sendMail(mailData, function (err, info) {
