@@ -8,7 +8,7 @@ const { uuid } = require('uuidv4');
 const staticPath = path.join(process.cwd(),'public')
 
 // convert base64 string into actual file.
-const convertBase64 = async (data, fileName, directory = 'ids',isImage = true, isSlideImage = false) => {
+const convertBase64 = async (data, fileName, directory = 'ids',isImage = true, isSlideImage = false, extenstion = 'jpeg') => {
     
     try {
 
@@ -21,14 +21,13 @@ const convertBase64 = async (data, fileName, directory = 'ids',isImage = true, i
         } 
 
         const buffer = Buffer.from(data[1], "base64");
-        let result = await base64.decode(buffer, { fname: `${url}${fileName}`, ext: isImage ? 'jpeg' : 'pdf' });
+        let result = await base64.decode(buffer, { fname: `${url}${fileName}`, ext: isImage ? extenstion : 'pdf' });
 
         if(result == 'file written successfully to disk'){
             if(isImage){
                 Jimp.read(`${url}${fileName}.jpeg`)
                 .then(image => {
-                    return image.quality(40).write(`${url}${fileName}.jpeg`);
-                    
+                    return image.quality(40).write(`${url}${fileName}.jpeg`);  
                 }).catch(err => {
                     return {
                         status: false, message: err.message
@@ -69,7 +68,7 @@ const deleteFiles = (req, res, isDirectory = false) => {
             return { status: true, message: `file deleted successfully.` };
          
         } else {
-            return { status: false, message: `file does not exist.` };  
+            return { status: isDirectory ? false : true, message: `file does not exist.` };  
         }
 
     } catch(err){

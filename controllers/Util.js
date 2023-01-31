@@ -47,57 +47,77 @@ router.post('/createImage', async(req, res) => {
     req.body.id = uuid().replace('-', '');
 
     let image = req.body.image;
-
     delete req.body.image;
-
-    try {
-    
-        pool.get_connection(qb => {
-            qb.insert('tbl_images_gallery', req.body, async (err) => {
-                qb.release();
-                if (err) {
-                    return res.send({ status: false, message: err.sqlMessage });
-
-                } else {
-
-                    let result = await convertBase64(image, req.body.id,`images/slide`, true, true);
-
-                    if(result.status){
-                        res.send({ status: true, message: 'Uploaded successfully.' });
-
-                    } else {
-                        res.send(result);
-
-                    }
-                }    
-            });
-        });
         
-    } catch(err){
-        res.status(200).send({ status: false, message: err.message });
+    let result = await convertBase64(image, req.body.id,`images/slide`, true, true, req.body.filename);
+
+    req.body.filename = `${req.body.id}.${req.body.filename}`;
+
+    if(result == undefined){
+        try {
+    
+            pool.get_connection(qb => {
+                qb.insert('tbl_images_gallery', req.body, async (err) => {
+                    qb.release();
+                    if (err) {
+                        return res.send({ status: false, message: err.sqlMessage });
+    
+                    } else {
+                        res.send({ status: true, message: 'Uploaded successfully.' });
+                    }    
+                });
+            });
+            
+        } catch(err){
+            res.status(200).send({ status: false, message: err.message });
+        }
+
+    } else {
+        res.send(result);
     }
+
 });
 
 router.post('/updateImage', async(req, res) => {
-    try {
+    var result = undefined;
+    
+    if(req.body.image){
+        let image = req.body.image;
+        
+        result = await convertBase64(image, req.body.id,`images/slide`, true, true, req.body.filename);
+        req.body.filename = `${req.body.id}.${req.body.filename}`;
 
-        pool.get_connection(qb => {
-            qb.update('tbl_images_gallery', req.body, { id: req.body.id }, (err) => {
-                qb.release();
-                if (err) return res.send({ status: false, message: err.sqlMessage });
-                res.send({ status: true, message: 'Updated successfully.' });
-            });
-        });
-
-    } catch(err){
-        res.status(200).send({ status: false, message: err.message });
+        await deleteFiles(req,res, false);
     }
+    
+    delete req.body.image;
+    delete req.body.url;
+
+    if(result == undefined){
+        try {
+
+            pool.get_connection(qb => {
+                qb.update('tbl_images_gallery', req.body, { id: req.body.id }, (err) => {
+                    qb.release();
+                    if (err) return res.send({ status: false, message: err.sqlMessage });
+                    res.send({ status: true, message: 'Updated successfully.' });
+                });
+            });
+
+        } catch(err){
+            res.status(200).send({ status: false, message: err.message });
+        }
+
+    } else {
+        res.send(result);
+    }
+
 });
 
 router.post('/sortImage', async(req, res) => {
     try {
         pool.get_connection(qb => {
-            let select = "*,CONCAT('images/slide/',id) As url";
+            let select = "*,CONCAT('images/slide/',filename) As url";
 
             qb.select(select, false)
             .from('tbl_images_gallery')
@@ -120,7 +140,7 @@ router.post('/searchImage', async(req, res) => {
     try {
 
         pool.get_connection(qb => {
-            let select = "*,CONCAT('images/slide/',id) As url";
+            let select = "*,CONCAT('images/slide/',filename) As url";
 
             qb.select(select, false)
             .from('tbl_images_gallery')
@@ -139,22 +159,37 @@ router.post('/searchImage', async(req, res) => {
     }
 });
 
+router.post('/deleteImage', async(req, res) => {
+    var ids = [];
 
-router.post('/deleteImage', (req, res) => {
     try {
-        pool.get_connection(qb => {
-            qb.or_where_in('id', req.body.ids)
-            qb.delete('tbl_images_gallery', (err) => {
-                qb.release();
-                if (err) return res.status(200).send({ status: false, message: err.message });
 
-                res.status(200).send({ status: true, message: 'Image deleted successfully.' });
-            });
+        await req.body.images.forEach(async (element) => {
+            let result = await deleteFiles({ body: { url: element.url } },res, false);
+
+            if(result.status){
+                ids.push(element.id);
+            }
+
         });
-  
+
+        if(ids.length){
+            pool.get_connection(qb => {
+                qb.delete('tbl_images_gallery',{ 'id': ids }, (err) => {
+                    qb.release();
+                    if (err) return res.status(200).send({ status: false, message: err.message });
+                    res.status(200).send({ status: true, message: 'Image deleted successfully.' });
+                });
+            });
+
+        } else {
+            res.status(200).send({ status: false, message: 'Unable to delete Images. try again.' });
+        }
+
     } catch(err){
         res.status(200).send({ status: false, message: err.message });
     }
+
 });
 
 // general file delete endpoint
@@ -164,15 +199,20 @@ router.post('/deleteFiles', async(req, res) => {
 });
 
 
-router.get('/getSlidePhotos', async(req, res) => {
+router.get('/getSlidePhotos/:forFrontpage', async(req, res) => {
     try {
         pool.get_connection(qb => {
-            let select = "*,CONCAT('images/slide/',id) As url";
+            let select = "*,CONCAT('images/slide/',filename) As url";
 
             qb.select(select, false)
             .from('tbl_images_gallery')
             .order_by('updatedAt','desc')
-            .get((err, response) => {
+
+            if(req.params.forFrontpage == 'true'){
+                qb.where('showInSlide', 1)
+            }
+
+            qb.get((err, response) => {
                 qb.release();
                 if (err) return res.status(200).send({ status: false, message: err.sqlMessage });
                 res.status(200).send({ 
