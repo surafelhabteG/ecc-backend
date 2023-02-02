@@ -19,7 +19,7 @@ router.post('/contactUs', async (req, res) => {
         const mailData = {
             from: req.body.email,
             to: 'surafel@360ground.com',
-            subject: `contactus message from ${req.body.fullName}, phone number : ${req.body.phoneNumber}`,
+            subject: `contactus message from ${req.body.firstName} ${req.body.lastName}, phone number : ${req.body.phoneNumber}`,
             text: req.body.message,
         };
     
@@ -29,8 +29,8 @@ router.post('/contactUs', async (req, res) => {
     
             } else {
                 res.status(200).send({ status: true, 
-                    message: 'Thank you for your contact Us. we will reach you as soon as we can.'});
-            }   
+                    message: 'Thank you for contact us. We will reach you as soon as we can.'});
+            }
         });
 
     } catch(error){

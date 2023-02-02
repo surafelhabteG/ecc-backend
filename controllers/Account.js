@@ -9,6 +9,8 @@ const canvasAPI = require('node-canvas-api');
 const fs = require("fs");
 const path = require('path')
 
+const jwt = require('jsonwebtoken');
+
 const staticPath = path.join(process.cwd(),'public')
 
 // User Authntication and other
@@ -101,13 +103,18 @@ router.post('/login', async (req, res) => {
             canvasAPI.getSelf(response.user.id).then(async (response) => {
                 response = { ...response, ...access_token };
     
+
+                let token = jwt.sign({ username: response.id }, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
+
                 if(response.sis_user_id == 'admin'){
                     var id = response.id;
+                    response.token = token;
 
                     await redisClient.set(id.toString(), JSON.stringify(response), {
                         EX: 3600,
                         NX: true,
                       });
+
                     res.status(200).send({
                         status: true,
                         message: response
@@ -132,6 +139,8 @@ router.post('/login', async (req, res) => {
                             data.login_id = loginDetail[0].id;
                             data.account_id = loginDetail[0].account_id;
                             var id = data.id;
+
+                            data.token = token;
 
                             await redisClient.set(id.toString(), JSON.stringify(data), {
                                 EX: 300,
@@ -258,7 +267,6 @@ router.post('/changePassword/:accountId/:loginId', (req, res) => {
         })
     });
 });
-
 
 router.post('/resetPassword', async(req, res) => {
     canvasAPI.searchUser(`sis_login_id:${req.body.email}`).then(async (response) => {

@@ -64,11 +64,6 @@ app.get('/verifayToken', authenticateToken, (req, res) => {
     res.status(200).send('success');
 })
 
-app.get('/generateToken', (req, res) => {
-    let token = jwt.sign(username, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
-    res.status(200).send(token);
-});
-
 
 app.post('/orders', validator.body(querySchema), (req, res, next) => {
     try {

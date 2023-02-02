@@ -5,6 +5,8 @@ const router = express.Router();
 const { uuid } = require('uuidv4');
 const transporter = require('../helpers/Mailer');
 const date = require('date-and-time');
+const moment = require("moment");
+
 
 const { pool } = require('../helpers/Db');
 
@@ -62,6 +64,24 @@ router.post('/generateCertificate',(req,res) => {
     
 })
 
+router.post('/updateCertificate',(req,res) => {
+    try {
+       
+        pool.get_connection(qb => {
+            qb.update('tbl_certificate' , req.body, { id: req.body.id } , async (err) => {
+                qb.release()
+                
+                if (err) return res.send({ status: false, message: err.message });
+                res.send({ status: true, message: { id: req.body.id } });                    
+            })
+        })
+        
+    } catch(err){
+        res.status(200).send({ status: false, message: err.message });
+    }
+
+})
+
 router.get('/viewCertificate/:id', async (req,res) => {
     try {
 
@@ -73,12 +93,12 @@ router.get('/viewCertificate/:id', async (req,res) => {
                     if (err) return res.send({ status: false, message: err.sqlMessage });
     
                     response = await response[0];
-                    response.createdAt = date.format(response.createdAt, 'YYYY/MM/DD HH:mm:ss');
-                    
+
+                    response.coureseStartDate = moment(response.coureseStartDate).format('ll');
+                    response.coureseEndDate = moment(response.coureseEndDate).format('ll');
+
                     return await res.render('certificate.ejs',response);
                     // return res.status(200).send({ status: true, message: response });
-
-
                 });
         })
 
