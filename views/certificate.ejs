@@ -1,141 +1,153 @@
 <!DOCTYPE html>
-                <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <link href="https://fonts.googleapis.com/css?family=Great+Vibes&display=swap" rel="stylesheet">
-                        <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- bootstraps -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+      
+        <!-- google font -->
+        <link href="https://fonts.googleapis.com/css?family=Great+Vibes&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
 
-                        <title>Congragulation <%= studentName.toUpperCase() %></title>
-                        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js" defer></script>
-                        <script>
-                            // window.onload = () => {
+        <title>Congragulation <%= studentName.toUpperCase() %></title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js" defer></script>
+        <script>
+            // window.onload = () => {
+                
+            //     var element = document.querySelector('.container');
+
+            //     var opt = {
+            //         // margin:       [2,2,0,2],
+            //         filename:     'certificate.pdf',
+            //         image:        { type: 'png', quality: 0.98 },
+            //         html2canvas:  { scale: 2 },
+            //         jsPDF:        { unit: 'px', format: 'A4', orientation: 'landscape' },
+            //         enableLinks: true
+            //       }
+
+                    
+            //     html2pdf().set(opt).from(element).save();
+
+            // }
+        </script>
+        <style>
+        
+        .customContainer {
+            display: grid;
+        
+            grid-template-columns: repeat(12,1fr);
                                 
-                            //     var element = document.querySelector('.container');
+            height:1000px !important;
+            width: 3508px !important;
 
-                            //     var opt = {
-                            //         // margin:       [2,2,0,2],
-                            //         filename:     'certificate.pdf',
-                            //         image:        { type: 'png', quality: 0.98 },
-                            //         html2canvas:  { scale: 2 },
-                            //         jsPDF:        { unit: 'px', format: 'A4', orientation: 'landscape' },
-                            //         enableLinks: true
-                            //       }
+            background-image: url('http://localhost:4000/certificate_template.png') !important;
+            background-size: 1500px 1000px !important;
+            background-repeat: no-repeat !important;
 
-                                  
-                            //     html2pdf().set(opt).from(element).save();
+        }
+        
+        .studentname {                   
+            font-size: 47px !important;
+            color: gray !important;
+            /* margin: 30px !important; */
+            font-family: serif !important;
+            float: left !important;
+            margin-left: 395px !important;
+            margin-top: 517px !important;
+            text-transform: capitalize !important;
+            width: 962px !important;
+            font-family: 'Great Vibes' !important;
+            text-align: center !important;
+        }
+        
+        .courseInfoHeading {
+            font-size: 21px !important;
+            color: gray !important;
+            float: left !important;
+            margin-left: 542px !important;
+            margin-top: 9px !important;
+            font-family: sans-serif !important;
+            width: 151% !important;
+            font-family: 'Montserrat' !important;
+        }
 
-                            // }
-                        </script>
-                        <style>
-                        
-                        .container {
-                            display: grid;
-                        
-                            grid-template-columns: repeat(12,1fr);
-                                                
-                            height:1000px !important;
-                            width: 3508px !important;
+        .courseInfo {
+            font-size: 22px !important;
+            color: gray !important;
+            float: left !important;
+            margin-left: 550px !important;
+            margin-top: 3px !important;
+            font-family: sans-serif !important;
+            text-transform: capitalize !important;
+            width: 151% !important;
+            font-family: 'Montserrat' !important;
+        }
 
-                            background-image: url('http://localhost:4000/certificate_template.png') !important;
-                            background-size: 1500px 1000px !important;
-                            background-repeat: no-repeat !important;
+        .verificationCodeText {
+            margin-top: 868px !important;
+            margin-left: -341px !important;
+            float: left !important;
+            color: gray !important;
+            font-weight: bolder !important;
+            width: 139% !important;
+        }
+        
+        .verificationCode{
+            margin-top: 12px !important;
+            margin-left: -21px !important;
+            float: left !important;
+            color: gray !important;
+            font-weight: lighter !important;
+            font-size: 21px !important;
+            text-transform: capitalize !important;
+        }
 
-                        }
-                        
-                        .studentname {                   
-                            font-size: 47px !important;
-                            color: gray !important;
-                            /* margin: 30px !important; */
-                            font-family: serif !important;
-                            float: left !important;
-                            margin-left: 622px !important;
-                            margin-top: 517px !important;
-                            text-transform: capitalize !important;
-                            width: 100% !important;
-                            font-family: 'Great Vibes' !important;
-                        }
-                        
-                        .courseInfoHeading {
-                            font-size: 21px !important;
-                            color: gray !important;
-                            float: left !important;
-                            margin-left: 542px !important;
-                            margin-top: 9px !important;
-                            font-family: sans-serif !important;
-                            width: 151% !important;
-                            font-family: 'Montserrat' !important;
-                        }
-
-                        .courseInfo {
-                            font-size: 22px !important;
-                            color: gray !important;
-                            float: left !important;
-                            margin-left: 550px !important;
-                            margin-top: 3px !important;
-                            font-family: sans-serif !important;
-                            text-transform: capitalize !important;
-                            width: 151% !important;
-                            font-family: 'Montserrat' !important;
-                        }
-
-                        .verificationCodeText {
-                            margin-top: 868px !important;
-                            margin-left: -341px !important;
-                            float: left !important;
-                            color: gray !important;
-                            font-weight: bolder !important;
-                            width: 139% !important;
-                        }
-                        
-                        .verificationCode{
-                            margin-top: 12px !important;
-                            margin-left: -21px !important;
-                            float: left !important;
-                            color: gray !important;
-                            font-weight: lighter !important;
-                            font-size: 21px !important;
-                            text-transform: capitalize !important;
-                        }
-
-                        .dates {
-                            margin-top: 714px !important;
-                            margin-left: -112px !important;
-                            color: gray !important;
-                            font-size: 15px !important;
-                            font-family: 'Montserrat' !important;
-                        }
-                        
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <div>
-                                <div class="studentname">
-                                    <%= studentName %>
-                                </div>
-
-                                <div class="courseInfoHeading">
-                                    <p>Person above has completed the course</p>
-                                </div>
-
-                                <div class="courseInfo">
-                                    <span><%= courseName %></span>
-                                </div> 
-                            </div>
-
-                            <div class="dates">
-                                <p>
-                                    From   <i><u><span><%= coureseStartDate %></span></u></i>   To   <i><u><span><%= coureseEndDate %></span></u></i>
-                                </p>
-                            </div>
-
-                            <div>
-                                <div class="verificationCodeText">
-                                    <%= id %> 
-                                </div>
+        .dates {
+            margin-top: 714px !important;
+            margin-left: -112px !important;
+            color: gray !important;
+            font-size: 15px !important;
+            font-family: 'Montserrat' !important;
+        }
+        
+        </style>
+    </head>
+    <body>
+        <div class="customContainer">
+            <div>
+                <div class="studentname">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-12 col-md-12 col-lg-12">
+                                <%= studentName %>
                             </div>
                         </div>
-                    </body>
-                 </html>
+                    </div>
+                </div>
+
+                <div class="courseInfoHeading">
+                    <p>Person above has completed the course</p>
+                </div>
+
+                <div class="courseInfo">
+                    <span><%= courseName %></span>
+                </div> 
+            </div>
+
+            <div class="dates">
+                <p>
+                    From   <i><u><span><%= coureseStartDate %></span></u></i>   To   <i><u><span><%= coureseEndDate %></span></u></i>
+                </p>
+            </div>
+
+            <div>
+                <div class="verificationCodeText">
+                    <%= id %> 
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

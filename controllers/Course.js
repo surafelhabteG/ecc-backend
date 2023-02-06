@@ -50,7 +50,7 @@ router.post('/searchCourses', async (req, res) => {
     try {
 
         pool.get_connection(qb => {
-            qb.select('*')
+            qb.select('ext.*, category',false)
             .from('tbl_course_extra_info As ext')
             .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
             .or_like('courseTitle', req.body.courseTitle)
@@ -80,7 +80,7 @@ router.post('/filterCourses', async (req, res) => {
             var keys = Object.keys(body);
             var values = Object.values(body);
 
-            qb.select('*')
+            qb.select('ext.*, category',false)
             .from('tbl_course_extra_info As ext')
             .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
 
@@ -114,7 +114,10 @@ router.get('/getAllModules/:courseId', async (req, res) => {
         const cacheResults = await redisClient.get(`modules/${req.params.courseId}`);
 
         if (cacheResults) {
-            res.status(200).send(JSON.parse(cacheResults));
+            res.status(200).send( {
+                status: true,
+                message: JSON.parse(cacheResults)
+            });
 
         } else {
             canvasAPI.getModules(req.params.courseId, req.query.studentId).then(async (response) => {
@@ -185,7 +188,7 @@ router.get('/getQuizSubmission/:courseId/:quizId',(req, res) => {
 router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
     try {
         pool.get_connection(qb => {
-            qb.select('*')
+            qb.select('ext.*, category',false)
             .from('tbl_course_extra_info As ext')
             .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
             .where('courseId', req.params.courseId)
@@ -211,8 +214,9 @@ router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
 router.get('/getAllCourseExtraInfo/:limit', (req, res) => {
 
     try {
+
         pool.get_connection(qb => {
-            qb.select('*')
+            qb.select('ext.*, category',false)
             .from('tbl_course_extra_info As ext')
             .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
 
