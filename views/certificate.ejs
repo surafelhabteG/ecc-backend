@@ -34,118 +34,104 @@
             // }
         </script>
         <style>
-        
-        .customContainer {
-            display: grid;
-        
-            grid-template-columns: repeat(12,1fr);
-                                
-            height:1000px !important;
-            width: 3508px !important;
+            .customContainer {
+                display: grid;
+                grid-template-columns: repeat(12,1fr);            
+                height:1000px !important;
+                width: 1478px !important;
+                background-image: url('http://localhost:4000/certificate_template.png') !important;
+                background-size: 1500px 1000px !important;
+                background-repeat: no-repeat !important;
+            }
+            
+            .studentname {                   
+                font-size: 47px !important;
+                color: gray !important;
+                font-family: serif !important;
+                margin-top: 517px !important;
+                text-transform: capitalize !important;
+                font-family: 'Great Vibes' !important;
+            }
+            
+            .courseInfoHeading {
+                font-size: 21px !important;
+                color: gray !important;
+                float: left !important;
+                margin-left: 542px !important;
+                margin-top: 9px !important;
+                font-family: sans-serif !important;
+                width: 151% !important;
+                font-family: 'Montserrat' !important;
+            }
 
-            background-image: url('http://localhost:4000/certificate_template.png') !important;
-            background-size: 1500px 1000px !important;
-            background-repeat: no-repeat !important;
+            .courseInfo {
+                font-size: 22px !important;
+                color: gray !important;
+                margin-top: 3px !important;
+                text-transform: capitalize !important;
+                font-family: 'Montserrat' !important;
+            }
 
-        }
-        
-        .studentname {                   
-            font-size: 47px !important;
-            color: gray !important;
-            /* margin: 30px !important; */
-            font-family: serif !important;
-            float: left !important;
-            margin-left: 395px !important;
-            margin-top: 517px !important;
-            text-transform: capitalize !important;
-            width: 962px !important;
-            font-family: 'Great Vibes' !important;
-            text-align: center !important;
-        }
-        
-        .courseInfoHeading {
-            font-size: 21px !important;
-            color: gray !important;
-            float: left !important;
-            margin-left: 542px !important;
-            margin-top: 9px !important;
-            font-family: sans-serif !important;
-            width: 151% !important;
-            font-family: 'Montserrat' !important;
-        }
-
-        .courseInfo {
-            font-size: 22px !important;
-            color: gray !important;
-            float: left !important;
-            margin-left: 550px !important;
-            margin-top: 3px !important;
-            font-family: sans-serif !important;
-            text-transform: capitalize !important;
-            width: 151% !important;
-            font-family: 'Montserrat' !important;
-        }
-
-        .verificationCodeText {
-            margin-top: 868px !important;
-            margin-left: -341px !important;
-            float: left !important;
-            color: gray !important;
-            font-weight: bolder !important;
-            width: 139% !important;
-        }
-        
-        .verificationCode{
-            margin-top: 12px !important;
-            margin-left: -21px !important;
-            float: left !important;
-            color: gray !important;
-            font-weight: lighter !important;
-            font-size: 21px !important;
-            text-transform: capitalize !important;
-        }
-
-        .dates {
-            margin-top: 714px !important;
-            margin-left: -112px !important;
-            color: gray !important;
-            font-size: 15px !important;
-            font-family: 'Montserrat' !important;
-        }
+            .verificationCodeText {
+                margin-top: 75px !important;
+                margin-left: 44px !important;
+                color: gray !important;
+                font-weight: bolder !important;
+            }
+            
+            .dates {
+                margin-top: 75px !important;
+                color: gray !important;
+                font-size: 15px !important;
+                font-family: 'Montserrat' !important;
+            }
         
         </style>
-    </head> 
+    </head>
     <body>
         <div class="customContainer">
             <div>
                 <div class="studentname">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-sm-12 col-md-12 col-lg-12">
+                        <div class="row" style="width: 1478px !important;">
+                            <div class="col-sm-12 col-md-2 col-lg-2"></div>
+                            <div class="col-sm-12 col-md-8 col-lg-8" style="text-align: center !important;">
                                 <%= studentName %>
                             </div>
+                            <div class="col-sm-12 col-md-2 col-lg-2"></div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="courseInfoHeading">
-                    <p>Person above has completed the course</p>
                 </div>
 
                 <div class="courseInfo">
-                    <span><%= courseName %></span>
+                    <div class="row" style="width: 1478px !important;">
+                        <div class="col-sm-12 col-md-1 col-lg-1"></div>
+                        <div class="col-sm-12 col-md-10 col-lg-10" style="text-align: center !important;">
+                            <p>Person above has completed the course</p>
+                            <p><%= courseName %></p>
+                        </div>
+                        <div class="col-sm-12 col-md-1 col-lg-1"></div>
+                    </div>
                 </div> 
-            </div>
 
-            <div class="dates">
-                <p>
-                    From   <i><u><span><%= coureseStartDate %></span></u></i>   To   <i><u><span><%= coureseEndDate %></span></u></i>
-                </p>
-            </div>
+                <div class="dates">
+                    <div class="row" style="width: 1478px !important;">
+                        <div class="col-sm-12 col-md-2 col-lg-2"></div>
+                        <div class="col-sm-12 col-md-8 col-lg-8" style="text-align: center !important;">
+                            <p>
+                                From   <i><u><b><span><%= coureseStartDate %></span></b></u></i>   To   <i><u><b><span><%= coureseEndDate %></span></b></u></i>
+                            </p>
+                        </div>
+                        <div class="col-sm-12 col-md-2 col-lg-2"></div>
+                    </div>
+                </div>
 
-            <div>
-                <div class="verificationCodeText">
-                    <%= id %> 
+                <div class="row" style="width: 1478px !important;">
+                    <div class="col-sm-12 col-md-2 col-lg-2"></div>
+                    <div class="col-sm-12 col-md-8 col-lg-8" style="text-align: center !important;">
+                        <div class="verificationCodeText">
+                            <%= id %> 
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-2 col-lg-2"></div>
                 </div>
             </div>
         </div>
