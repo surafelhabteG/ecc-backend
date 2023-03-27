@@ -11,6 +11,20 @@ const { pool } = require('../helpers/Db');
 
 const { uuid } = require('uuidv4');
 
+/**
+ * @api {post} /contactUs to send the contact us message
+ * @apiName contactUs
+ * @apiGroup Util
+ *
+ * @apiParam {String} req.body Data of the message.
+ *
+ * @apiSuccess {Boolean} status Status of the API request.
+ * @apiSuccess {Object} message Object containing id of the created message submitted.
+ *
+ * @apiError {Boolean} status Status of the API request.
+ * @apiError {String} message Error message.
+ *
+ */
 
 router.post('/contactUs', async (req, res) => {
 
@@ -42,6 +56,22 @@ router.post('/contactUs', async (req, res) => {
     }
 });
 
+
+/**
+ * @api {post} /createImage Create Image
+ * @apiName CreateImage
+ * @apiGroup Image
+ *
+ * @apiParam {String} image Base64 encoded image data.
+ * @apiParam {String} filename Name of the image file.
+ * @apiParam {String} title Title of the image.
+ *
+ * @apiSuccess {Boolean} status Indicates whether the operation was successful or not.
+ * @apiSuccess {String} message A message describing the result of the operation.
+
+ * @apiError {Boolean} status Indicates whether the operation was successful or not.
+ * @apiError {String} message A message describing the error that occurred.
+ */
 
 router.post('/createImage', async(req, res) => {
     req.body.id = uuid().replace('-', '');
@@ -78,6 +108,18 @@ router.post('/createImage', async(req, res) => {
 
 });
 
+/**
+
+@api {post} /updateImage Update Image
+@apiName UpdateImage
+@apiGroup Image
+@apiParam {String} id ID of the image to update.
+@apiParam {String} [filename] Filename of the image to update.
+@apiParam {String} [image] Base64 string of the image to update.
+@apiSuccess {Boolean} status Status of the request.
+@apiSuccess {String} message Success message.
+
+*/
 router.post('/updateImage', async(req, res) => {
     var result = undefined;
     
@@ -114,6 +156,14 @@ router.post('/updateImage', async(req, res) => {
 
 });
 
+/**
+
+@api {post} /sortImage Sort Images
+@apiName SortImages
+@apiGroup Image
+@apiParam {String} sortBy Sort order ("asc" or "desc").
+
+*/
 router.post('/sortImage', async(req, res) => {
     try {
         pool.get_connection(qb => {
@@ -135,6 +185,16 @@ router.post('/sortImage', async(req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+
+/**
+
+@api {post} /searchImage Search Images
+@apiName SearchImages
+@apiGroup Image
+@apiParam {String} title Search title of images
+
+*/
 
 router.post('/searchImage', async(req, res) => {
     try {
@@ -192,13 +252,27 @@ router.post('/deleteImage', async(req, res) => {
 
 });
 
-// general file delete endpoint
+/**
+ * @api {post} /deleteFiles Delete files
+ * @apiName DeleteFiles
+ * @apiGroup Files
+ * 
+ * @apiParam {Array} files Array of file names to be deleted.
+ */
+
 router.post('/deleteFiles', async(req, res) => {
     let result = await deleteFiles(req, res);
     res.status(200).send(result)
 });
 
+/**
 
+@api {get} /getSlidePhotos get Images for front-end
+@apiName getSlidePhotoss
+@apiGroup Image
+@apiParam {String} forFrontpage Search flag of images for frontend
+
+*/
 router.get('/getSlidePhotos/:forFrontpage', async(req, res) => {
     try {
         pool.get_connection(qb => {

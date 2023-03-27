@@ -10,7 +10,26 @@ const moment = require("moment");
 
 const { pool } = require('../helpers/Db');
 
-//create certificate for user who has completed all course requirements
+
+/**
+ * @api {post} /generateCertificate Create Certificate
+ * @apiName Create Certificate
+ * @apiGroup Certificate
+ *
+ * @apiParam {String} studentName Student's name.
+ * @apiParam {String} email Student's email.
+ * @apiParam {String} courseId ID of the completed course.
+ * @apiParam {String} courseName Name of the completed course.
+ * @apiParam {Date} courseStartDate Date when the course was started.
+ * @apiParam {Date} courseEndDate Date when the course was completed.
+ *
+ * @apiSuccess {Object} response Response object.
+ * @apiSuccess {Boolean} response.status Status of the response (true or false).
+ * @apiSuccess {Object} response.message Message object containing the generated ID of the created certificate.
+ * @apiSuccess {String} response.message.id Generated ID of the created certificate.
+ */
+
+
 router.post('/generateCertificate',(req,res) => {
     try {
         req.body.id = uuid().replace('-', '');
@@ -64,6 +83,17 @@ router.post('/generateCertificate',(req,res) => {
     
 })
 
+/**
+ * @api {post} /updateCertificate Update certificate
+ * @apiName UpdateCertificate
+ * @apiGroup Certificate
+ * 
+ * @apiParam {Object} req.body Certificate data to be updated
+
+ * @apiSuccess {Object} message The ID of the updated certificate
+ * @apiError {Object} error Error object containing error message
+
+ */
 router.post('/updateCertificate',(req,res) => {
     try {
        
@@ -81,6 +111,8 @@ router.post('/updateCertificate',(req,res) => {
     }
 
 })
+
+
 
 router.get('/viewCertificate/:id', async (req,res) => {
     try {
@@ -107,6 +139,24 @@ router.get('/viewCertificate/:id', async (req,res) => {
     }
     
 })
+
+
+/**
+ * @api {post} /verifayCertificate Verify Certificate
+ * @apiName VerifyCertificate
+ * @apiGroup Certificate
+ *
+ * @apiParam {String} code Certificate ID to be verified.
+ *
+ * @apiSuccess {Object} message Object containing the verified certificate details.
+ * @apiSuccess {Number} message.id Certificate ID.
+ * @apiSuccess {String} message.name Name of the person who received the certificate.
+ * @apiSuccess {String} message.courseName Name of the course for which the certificate was issued.
+ * @apiSuccess {String} message.createdAt Date when the certificate was issued (formatted as 'MMM D, YYYY').
+ * @apiError {Object} message Error message.
+
+ */
+
 
 router.post('/verifayCertificate', async (req,res) => {
     try {
@@ -139,6 +189,8 @@ router.post('/verifayCertificate', async (req,res) => {
     
 })
 
+
+
 router.delete('/deleteCertificate/:id', async (req,res) => {
     try {
         pool.get_connection(qb => {
@@ -154,8 +206,7 @@ router.delete('/deleteCertificate/:id', async (req,res) => {
     }
 })
 
-//returns a list of all completed courses certificates
-//this list can be presented to show the number of courses completed by the user
+
 router.get('/getAllCertificates/:userId',async (req,res) => {
     try {
 

@@ -38,7 +38,18 @@ async function deletePaymentSideeffect(id){
     }
 }
 
-// Payment and sideEffect
+/**
+
+@api {post} /createPaymentReference Create Payment Reference
+@apiName CreatePaymentReference
+@apiGroup Payment
+@apiParam {Object} data Payment data.
+@apiSuccess {Boolean} status Success status.
+@apiSuccess {Object} message Response message.
+@apiError {Boolean} status Error status.
+@apiError {String} message Error message.
+
+*/
 router.post('/createPaymentReference', async (req, res) => {
     try {
 
@@ -92,6 +103,18 @@ router.post('/createPaymentReference', async (req, res) => {
 
 });
 
+/**
+
+@api {post} /paymentSuccessCallBack Payment Success callback call by the server
+@apiName paymentSuccessCallBack
+@apiGroup Payment
+@apiParam {Object} data Payment data.
+@apiSuccess {Boolean} status Success status.
+@apiSuccess {Object} message Response message.
+@apiError {Boolean} status Error status.
+@apiError {String} message Error message.
+
+*/
 router.post('/paymentSuccessCallBack', async (req, res) => {    
     try {
 
@@ -124,6 +147,19 @@ router.post('/paymentSuccessCallBack', async (req, res) => {
 
 });
 
+
+/**
+
+@api {get} /verifayPayment/:billReferenceNumber/:paymentId check Payment Status
+@apiName verifayPayment
+@apiGroup Payment
+@apiParam {Object} data Payment data.
+@apiSuccess {Boolean} status Success status.
+@apiSuccess {Object} message Response message.
+@apiError {Boolean} status Error status.
+@apiError {String} message Error message.
+
+*/
 router.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
     const requestOption = {
         'method': 'GET',
@@ -168,7 +204,20 @@ router.get('/verifayPayment/:billReferenceNumber/:paymentId', (req, res) => {
     });
 });
 
+/**
 
+@api {post} /checkPaymnetSettlement check Payment Settlment
+@apiName checkPaymnetSettlement
+@apiGroup Payment
+@apiParam {String} studentId studentId.
+@apiParam {String} courseId courseId.
+
+@apiSuccess {Boolean} status Success status.
+@apiSuccess {Object} message Response message.
+@apiError {Boolean} status Error status.
+@apiError {String} message Error message.
+
+*/
 router.post('/checkPaymnetSettlement', (req, res) => {
     try {
         
@@ -189,6 +238,24 @@ router.post('/checkPaymnetSettlement', (req, res) => {
     }
 });
 
+
+/**
+ * @api {post} /createPaymentSideeffect Create Payment Sideeffect
+ * @apiName CreatePaymentSideeffect
+ * @apiGroup Payment
+ *
+ * @apiParam {String} paymentId Unique payment identifier.
+ * @apiParam {String} paymentMethod Payment method used for the transaction.
+ * @apiParam {String} status Status of the payment.
+ *
+ * @apiSuccess {Boolean} status Status of the API request.
+ * @apiSuccess {Object} message Object containing id of the created payment sideeffect.
+ *
+ * @apiError {Boolean} status Status of the API request.
+ * @apiError {String} message Error message.
+ *
+ */
+
 router.post('/createPaymentSideeffect', (req, res) => {
     req.body.id = uuid().replace('-', '');
 
@@ -207,6 +274,21 @@ router.post('/createPaymentSideeffect', (req, res) => {
     }
 });
 
+/**
+ * @api {post} /updatePaymentSideeffect Update Payment Sideeffect
+ * @apiName updatePaymentSideeffect
+ * @apiGroup Payment
+ *
+ * @apiParam {String} paymentId Unique payment identifier.
+ * @apiParam {Object} req.body Data of of the payment.
+ *
+ * @apiSuccess {Boolean} status Status of the API request.
+ * @apiSuccess {Object} message Object containing id success message.
+ *
+ * @apiError {Boolean} status Status of the API request.
+ * @apiError {String} message Error message.
+ *
+ */
 router.post('/updatePaymentSideeffect', (req, res) => {
     try {
         pool.get_connection(qb => {
@@ -222,6 +304,17 @@ router.post('/updatePaymentSideeffect', (req, res) => {
     }
 });
 
+/**
+
+@api {delete} /deletePaymentSideeffect/:paymentId Delete Payment Sideeffect
+@apiName deletePaymentSideeffect
+@apiGroup Payment
+@apiParam {String} paymentId The ID of the payment sideeffect to delete
+@apiSuccess {Boolean} status Indicates if the operation was successful
+@apiSuccess {String} message A message indicating the result of the operation
+@apiError {Boolean} status Indicates if the operation was successful
+@apiError {String} message A message indicating the error that occurred during the operation
+*/
 router.delete('/deletePaymentSideeffect/:paymentId', (req, res) => {
     let result = deletePaymentSideeffect(req.params.paymentId);
 
@@ -229,6 +322,18 @@ router.delete('/deletePaymentSideeffect/:paymentId', (req, res) => {
 
 });
 
+
+/**
+
+@api {delete} /getPaymentSideeffectById/:paymentId get detail of Payment Sideeffect
+@apiName getPaymentSideeffectById
+@apiGroup Payment
+@apiParam {String} paymentId The ID of the payment sideeffect
+@apiSuccess {Boolean} status Indicates if the operation was successful
+@apiSuccess {String} message A message Detail of the payment sideeffect
+@apiError {Boolean} status Indicates if the operation was successful
+@apiError {String} message A message indicating the error that occurred during the operation
+*/
 
 router.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
     try {
@@ -247,7 +352,6 @@ router.get('/getPaymentSideeffectById/:paymentId', (req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
-
 
 
 module.exports = router;

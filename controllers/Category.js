@@ -4,6 +4,19 @@ const { uuid } = require('uuidv4');
 
 const { pool } = require('../helpers/Db');
 
+/**
+ * @api {post} /category Create a new course category
+ * @apiName CreateCourseCategory
+ * @apiGroup Course Category
+ *
+ * @apiSuccess {Object} status `true` if the category was created successfully
+ * @apiSuccess {String} message A success message indicating that the category was created
+ *
+ * @apiError {Object} status `false` if an error occurred while creating the category
+ * @apiError {String} message An error message explaining the reason for the failure
+ */
+
+
 router.post('', (req, res) => {
     try {
         req.body.id = uuid().replace('-', '');
@@ -18,6 +31,19 @@ router.post('', (req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+/**
+ * @api {post} /category/update Update an existing course category
+ * @apiName UpdateCourseCategory
+ * @apiGroup Course Category
+ *
+ * @apiSuccess {Boolean} status `true` if the category was updated successfully
+ * @apiSuccess {String} message A success message indicating that the category was updated
+ *
+ * @apiError {Boolean} status `false` if an error occurred while updating the category
+ * @apiError {String} message An error message explaining the reason for the failure
+ */
+
 
 router.post('/update', (req, res) => {
     try {
@@ -34,6 +60,19 @@ router.post('/update', (req, res) => {
     }
 });
 
+/**
+ * @api {get} /category Get all course categories
+ * @apiName GetAllCourseCategory
+ * @apiGroup Course Category
+ *
+ * @apiSuccess {Boolean} status `true` if the categories were retrieved successfully
+ * @apiSuccess {Object[]} message An array of category objects containing their `id` property
+ *
+ * @apiError {Boolean} status `false` if an error occurred while retrieving the categories
+ * @apiError {String} message An error message explaining the reason for the failure
+ */
+
+
 router.get('', (req, res) => {
     try {
         pool.get_connection(qb => {
@@ -49,6 +88,20 @@ router.get('', (req, res) => {
         res.status(200).send({ status: false, message: err.message });
     }
 });
+
+/**
+ * @api {delete} /category/:id Delete a course category
+ * @apiName DeleteCourseCategory
+ * @apiGroup Course Category
+ *
+ *  @apiParam {Number} id Category ID
+
+ * @apiSuccess {Boolean} status `true` if the category was deleted successfully
+ * @apiSuccess {String} message A success message indicating that the category was deleted
+ *
+ * @apiError {Boolean} status `false` if an error occurred while deleting the category
+ * @apiError {String} message An error message explaining the reason for the failure
+ */
 
 router.delete('/:id', (req, res) => {
     try {

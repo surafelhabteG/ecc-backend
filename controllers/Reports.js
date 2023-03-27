@@ -4,6 +4,13 @@ const router = express.Router();
 const { pool } = require('../helpers/Db');
 const canvasAPI = require('node-canvas-api');
 
+/**
+
+@api {get} /getAllFinancialReports Get all financial reports
+@apiName GetAllFinancialReports
+@apiGroup Report
+
+*/
 router.get('/getAllFinancialReports',(req, res) => {
     try {
         pool.get_connection(qb => {
@@ -22,6 +29,16 @@ router.get('/getAllFinancialReports',(req, res) => {
     }
 });
 
+
+/**
+
+@api {post} /filterFinancialReports Filter financial reports
+@apiName FilterFinancialReports
+@apiGroup Report
+@apiParam {String} startDate Start date for the filter in format 'YYYY-MM-DD'.
+@apiParam {String} endDate End date for the filter in format 'YYYY-MM-DD'.
+
+*/
 router.post('/filterFinancialReports', (req, res) => {
     try {
 
@@ -51,6 +68,14 @@ router.post('/filterFinancialReports', (req, res) => {
     }
 });
 
+/**
+
+@api {get} /getAllTraineePerformanceReports/:courseId Get all trainee performance reports
+@apiName GetAllTraineePerformanceReports
+@apiGroup Report
+@apiParam {Number} courseId Course ID.
+
+*/
 
 router.get('/getAllTraineePerformanceReports/:courseId',(req, res) => {
     try {
@@ -77,6 +102,19 @@ router.get('/getAllTraineePerformanceReports/:courseId',(req, res) => {
 });
 
 
+/**
+
+@api {post} /getAllTraineeListReports Get all trainee list reports
+@apiName GetAllTraineeListReports
+@apiGroup Report
+@apiParam {String} courseId Id of the course to get trainee reports for
+@apiParam {String} quizId Id of the quiz to get trainee reports for
+@apiSuccess {Boolean} status Indicates whether request was successful or not
+@apiSuccess {Object} message Object containing the trainee reports data
+@apiError {Boolean} status Indicates whether request was successful or not
+@apiError {String} message Error message
+
+*/
 router.post('/getAllTraineeListReports',(req, res) => {
     let body = req.body;
     
@@ -95,6 +133,19 @@ router.post('/getAllTraineeListReports',(req, res) => {
     }
 });
 
+
+/**
+
+@api {get} /getAllTraineeAverageReports/:courseId Get all trainee average reports
+@apiName GetAllTraineeAverageReports
+@apiGroup Report
+@apiParam {String} courseId Id of the course to get trainee reports for
+@apiSuccess {Boolean} status Indicates whether request was successful or not
+@apiSuccess {Object} message Object containing the trainee average reports data
+@apiError {Boolean} status Indicates whether request was successful or not
+@apiError {String} message Error message
+
+*/
 router.get('/getAllTraineeAverageReports/:courseId',(req, res) => {
     try {
         
