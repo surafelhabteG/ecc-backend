@@ -108,6 +108,37 @@ router.get('/viewCertificate/:id', async (req,res) => {
     
 })
 
+router.post('/verifayCertificate', async (req,res) => {
+    try {
+
+        pool.get_connection(qb  => {
+            qb.select('*')
+                .where('id', req.body.code)
+                .get('tbl_certificate', async (err, response) => {
+                    qb.release();
+                    if (err) return res.send({ status: false, message: err.sqlMessage });
+    
+                    response = await response[0];
+
+                    if(response) {
+                        response.createdAt = moment(response.createdAt).format('ll');
+
+                        return res.status(200).send({ status: true, message: response });
+
+                    } else {
+                        return res.status(200).send({ status: false, message: `Not verified` });
+
+                    }
+
+                });
+        })
+
+    } catch(err){
+        return res.status(200).send({ status: false, message: err.message });
+    }
+    
+})
+
 router.delete('/deleteCertificate/:id', async (req,res) => {
     try {
         pool.get_connection(qb => {

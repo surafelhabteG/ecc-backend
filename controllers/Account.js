@@ -104,11 +104,11 @@ router.post('/login', async (req, res) => {
                 response = { ...response, ...access_token };
     
 
-                let token = jwt.sign({ username: response.id }, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
+                // let token = jwt.sign({ username: response.id }, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
 
                 if(response.sis_user_id == 'admin'){
                     var id = response.id;
-                    response.token = token;
+                    // response.token = token;
 
                     await redisClient.set(id.toString(), JSON.stringify(response), {
                         EX: 3600,
@@ -140,7 +140,7 @@ router.post('/login', async (req, res) => {
                             data.account_id = loginDetail[0].account_id;
                             var id = data.id;
 
-                            data.token = token;
+                            // data.token = token;
 
                             await redisClient.set(id.toString(), JSON.stringify(data), {
                                 EX: 300,
