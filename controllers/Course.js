@@ -79,6 +79,7 @@ router.post('/searchCourses', async (req, res) => {
             .from('tbl_course_extra_info As ext')
             .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
             .or_like('courseTitle', req.body.courseTitle)
+            .where('publishStatus', 'published')
 
             .get((err, response) => {
                 qb.release();
@@ -123,6 +124,7 @@ router.post('/filterCourses', async (req, res) => {
             qb.select('ext.*, category',false)
             .from('tbl_course_extra_info As ext')
             .join('tbl_course_categories As cat', 'ext.categoryId=cat.id')
+            .where('publishStatus', 'published')
 
             keys.forEach((key, index) => {
 
@@ -317,7 +319,7 @@ router.get('/getCourseExtraInfo/:courseId', async (req, res) => {
  * @apiError {Boolean} status Indicates whether the request was successful or not.
  * @apiError {String} message The error message returned by the server.
  */
-router.get('/getAllCourseExtraInfo/:limit', (req, res) => {
+router.get('/getAllCourseExtraInfo/:limit/:publishStatus', (req, res) => {
 
     try {
 
@@ -328,6 +330,10 @@ router.get('/getAllCourseExtraInfo/:limit', (req, res) => {
 
             if(req.params.limit !== 'all'){
                 qb.limit(req.params.limit)
+            } 
+
+            if(req.params.publishStatus !== 'all'){
+                qb.where('publishStatus', 'published')
             } 
 
             qb.get((err, response) => {
